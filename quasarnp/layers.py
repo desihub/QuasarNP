@@ -35,17 +35,36 @@ def conv1d(x, w, stride=1, b=None):
     n_in = x.shape[1]
     nfilters = w.shape[-1]
     k = w.shape[0]
-    n_out = (n_in - k) / stride + 1
+    n_out = int((n_in - k) / stride + 1)
     out = []
 
-    # Loop over each filter and convolve (correlate) it.
-    for i in range(nfilters):
-        y = np.correlate(x[0, :, 0], w[:, 0, i], mode="valid")[::stride]
-        n_out = len(y)
-        out.append(y)
+    i = 0
+    j = 0
+    # This array is size
+    # (batch size, number of convolved datapoints, number of output filters)
+    result = np.zeros((x.shape[0], n_out, nfilters))
+    # Loop over strides keeping track of j as the index in the
+    # result array.
+    while i < (n_in - k + 1):
+        # Collapse the last two dimensions, that is collapse
+        # (batch size, kernel size, input dimension)
+        # to
+        # (batch size, kernel size * input dimension)
+        x1 = np.reshape(x[:, i:i+k, :], (x.shape[0], -1))
+        # Collapse the weights array from
+        # (kernel size, input dimension, output dimension)
+        # to
+        # (kernel size * input dimension, output dimension)
+        w1 = w.reshape((-1, nfilters))
+        # Dot product for this stage of the convolution
+        # Output is
+        # (batch_size, output dimension)
+        y = np.dot(x1, w1)
 
-    result = np.concatenate(out)
-    result = result.reshape((1, n_out, nfilters), order="F")
+        # Store the output for returning
+        result[:, j] = y
+        i += stride
+        j += 1
 
     # Make the bias vector if one wasn't passed
     if b is None:
