@@ -72,7 +72,7 @@ def conv1d(x, w, stride=1, b=None):
 
     return result + b # Adding bias
 
-# Tensorflow uses row major flattening which is the default for numpy
-# as well but I extracted this to a function anyway.
+# Flattening layer, need to only flatten along dimensions
+# that are not the batch size dimension.
 def flatten(x):
-    return x.reshape(1, order="C")
+    return x.reshape((x.shape[0], -1), order="C")
