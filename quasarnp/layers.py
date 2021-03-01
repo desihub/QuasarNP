@@ -36,22 +36,22 @@ def conv1d(x, w, stride=1, b=None):
     nfilters = w.shape[-1]
     k = w.shape[0]
     n_out = (n_in - k) / stride + 1
-
-    # Make the bias vector if one wasn't passed
-    if b is None:
-        b = np.zeros(int(n_out))
-
     out = []
 
     # Loop over each filter and convolve (correlate) it.
     for i in range(nfilters):
         y = np.correlate(x[0, :, 0], w[:, 0, i], mode="valid")[::stride]
-        y += b # Add the bias vector
         n_out = len(y)
         out.append(y)
 
     result = np.concatenate(out)
-    return result.reshape((1, n_out, nfilters), order="F")
+    result = result.reshape((1, n_out, nfilters), order="F")
+
+    # Make the bias vector if one wasn't passed
+    if b is None:
+        b = np.zeros(nfilters)
+
+    return result + b # Adding bias
 
 # Tensorflow uses row major flattening which is the default for numpy
 # as well but I extracted this to a function anyway.
