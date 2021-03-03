@@ -3,10 +3,11 @@ import numpy as np
 from .layers import conv1d, batch_normalization, dense, flatten, relu, sigmoid, linear
 
 class QuasarNP():
-    def __init__(self, weights, nlines=7):
+    def __init__(self, weights, nlines=7, rescale=False):
         # Store the weights to access later.
         self.weights = weights
         self.nlines = nlines
+        self.rescale = rescale
 
         self.convs = []
         nlayers = 4
@@ -52,7 +53,7 @@ class QuasarNP():
 
             w_offset = self.weights[f"fc_offset_{i}"]
             offset = dense(x_output, w_offset["kernel"], w_offset["bias"], sigmoid)
-            # offset = self.rescale(offset)
+            if self.rescale: offset = self.rescale(offset)
 
             o = np.concatenate([box, offset], axis=1)
             outputs.append(o)
