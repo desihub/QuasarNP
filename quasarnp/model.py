@@ -52,7 +52,7 @@ class QuasarNP():
 
             w_offset = self.weights[f"fc_offset_{i}"]
             offset = dense(x_output, w_offset["kernel"], w_offset["bias"], sigmoid)
-            offset = self.rescale(offset)
+            # offset = self.rescale(offset)
 
             o = np.concatenate([box, offset], axis=1)
             outputs.append(o)
