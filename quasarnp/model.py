@@ -7,7 +7,7 @@ class QuasarNP():
         # Store the weights to access later.
         self.weights = weights
         self.nlines = nlines
-        self.rescale = rescale
+        self.apply_rescale = rescale
 
         self.convs = []
         nlayers = 4
@@ -53,7 +53,7 @@ class QuasarNP():
 
             w_offset = self.weights[f"fc_offset_{i}"]
             offset = dense(x_output, w_offset["kernel"], w_offset["bias"], sigmoid)
-            if self.rescale: offset = self.rescale(offset)
+            if self.apply_rescale: offset = self.rescale(offset)
 
             o = np.concatenate([box, offset], axis=1)
             outputs.append(o)
