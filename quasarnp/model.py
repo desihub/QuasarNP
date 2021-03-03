@@ -38,7 +38,7 @@ class QuasarNP():
                                 w_batch["beta"], w_batch["gamma"], 0.001)
         return relu(y)
 
-    def evaluate(self, x_input):
+    def predict(self, x_input):
         x_output = np.copy(x_input) # To avoid side effects
         for name in self.convs:
             x_output = self.conv_layer(x_output, name)
@@ -59,3 +59,6 @@ class QuasarNP():
             outputs.append(o)
 
         return outputs
+
+    def __call__(self, x_input):
+        return self.predict(x_input)
