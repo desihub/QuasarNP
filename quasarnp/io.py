@@ -12,6 +12,7 @@ def load_file(filename):
 
           data_dict = {}
           for k2, v2 in a.items():
+            # This :-2 strips off the :0 at the end of weights names.
               data_dict[k2[:-2]] = v2[()]
 
           result[k1] = data_dict
