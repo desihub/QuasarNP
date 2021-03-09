@@ -36,7 +36,6 @@ def conv1d(x, w, stride=1, b=None):
     nfilters = w.shape[-1]
     k = w.shape[0]
     n_out = int((n_in - k) / stride + 1)
-    out = []
 
     i = 0
     j = 0
