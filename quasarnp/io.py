@@ -1,4 +1,5 @@
 import h5py
+import numpy as np
 
 from .model import QuasarNP
 
@@ -24,3 +25,11 @@ def load_file(filename):
 def load_model(filename):
     db = load_file(filename)
     return QuasarNP(db)
+
+llmin = np.log10(3600)
+llmax = np.log10(10000)
+dll = 1e-3
+
+nbins = int((llmax-llmin)/dll)
+wave = 10**(llmin + np.arange(nbins)*dll)
+nmasked_max = len(wave)+1
