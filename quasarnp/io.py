@@ -11,7 +11,10 @@ def load_file(filename):
         m_weights = f['model_weights']
 
         for k1, v1 in m_weights.items():
-            if len(v1) == 0: continue
+            if len(v1) == 0:
+                if k1 == "lambda":
+                    result[k1] = []
+                continue
             a = v1[k1]
 
             data_dict = {}
@@ -25,7 +28,10 @@ def load_file(filename):
 
 def load_model(filename):
     db = load_file(filename)
-    return QuasarNP(db)
+    if "lambda" in db:
+        return QuasarNP(db, rescale=True)
+    else:
+        return QuasarNP(db)
 
 llmin = np.log10(3600)
 llmax = np.log10(10000)
