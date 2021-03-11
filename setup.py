@@ -9,6 +9,6 @@ setup(
     author_email='dylanag@uci.edu',
     license='MIT',
     packages=find_packages(),
-    install_requires=['numpy', 'scipy', 'fitsio', 'h5py'],
+    install_requires=['numpy', 'fitsio', 'h5py'],
     zip_safe=False,
 )

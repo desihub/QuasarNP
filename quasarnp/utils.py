@@ -1,63 +1,7 @@
-from scipy.interpolate import interp1d
-from numpy import zeros, arange, array
+import numpy as np
 from .io import wave
 
-def process_preds(preds, lines, lines_bal):
-    '''
-    Convert network predictions to c_lines, z_lines and z_best
-    Arguments:
-    preds: float, array
-        model predictions, output of model.predict
-    lines: string, array
-        list of line names
-    lines_bal: string, array
-        list of BAL line names
-    Returns:
-    c_line: float, array
-        line confidences, shape: (nlines, nspec)
-    z_line: float, array
-        line redshifts, shape: (nlines, nspec)
-    zbest: float, array
-        redshift of highest confidence line, shape: (nspec)
-    c_line_bal: float, array
-        line confidences of BAL lines, shape: (nlines_bal, nspec)
-    z_line_bal: float, array
-        line redshfits of BAL lines, shape: (nlines_bal, nspec)
-    '''
-    assert len(lines)+len(lines_bal)==len(preds)
-
-    nspec, nboxes = preds[0].shape
-    nboxes //= 2
-    print('INFO: nspec = {}, nboxes={}'.format(nspec, nboxes))
-    nlines = len(lines)
-    c_line = zeros((nlines, nspec))
-    z_line = zeros((nlines, nspec))
-    i_to_wave = interp1d(arange(len(wave)), wave, 
-            bounds_error=False, fill_value='extrapolate')
-
-    for il in range(len(lines)):
-        l=absorber_IGM[lines[il]]
-        j = preds[il][:,:13].argmax(axis=1)
-        offset  = preds[il][arange(nspec, dtype=int), nboxes+j]
-        c_line[il]=preds[il][:,:13].max(axis=1)
-        z_line[il]=i_to_wave((j+offset)*len(wave)/nboxes)/l-1
-
-    zbest = z_line[c_line.argmax(axis=0),arange(nspec)]
-    zbest = array(zbest)
-
-    nlines_bal = len(lines_bal)
-    c_line_bal=zeros((nlines_bal, nspec))
-    z_line_bal=zeros((nlines_bal, nspec))
-
-    for il in range(len(lines_bal)):
-        l = absorber_IGM[lines_bal[il]]
-        j = preds[nlines+il][:,:13].argmax(axis=1)
-        offset  = preds[il+nlines][arange(nspec, dtype=int), nboxes+j]
-        c_line_bal[il]=preds[il+nlines][:,:13].max(axis=1)
-        z_line_bal[il]=i_to_wave((j+offset)*len(wave)/nboxes)/l-1
-
-    return c_line, z_line, zbest, c_line_bal, z_line_bal
-
+# Absorbtion wavelengths
 absorber_IGM = {
     'Halpha'      : 6562.8,
     'OIII(5008)'  : 5008.24,
@@ -94,8 +38,73 @@ absorber_IGM = {
     'NI(1200)'    : 1200.,
     'SiII(1193)'  : 1193.2897,
     'SiII(1190)'  : 1190.4158,
-    'OI(1039)'    : 1039.230, 
-    'OVI(1038)'   : 1037.613, 
+    'OI(1039)'    : 1039.230,
+    'OVI(1038)'   : 1037.613,
     'OVI(1032)'   : 1031.912,
     'LYB'         : 1025.72,
 }
+
+def process_preds(preds, lines, lines_bal):
+    '''
+    Convert network predictions to c_lines, z_lines and z_best
+    Arguments:
+    preds: float, array
+        model predictions, output of model.predict
+    lines: string, array
+        list of line names
+    lines_bal: string, array
+        list of BAL line names
+    Returns:
+    c_line: float, array
+        line confidences, shape: (nlines, nspec)
+    z_line: float, array
+        line redshifts, shape: (nlines, nspec)
+    zbest: float, array
+        redshift of highest confidence line, shape: (nspec)
+    c_line_bal: float, array
+        line confidences of BAL lines, shape: (nlines_bal, nspec)
+    z_line_bal: float, array
+        line redshfits of BAL lines, shape: (nlines_bal, nspec)
+    '''
+    assert len(lines) + len(lines_bal) == len(preds), "Total number of lines does not match number of predictions!"
+
+    nspec, nboxes = preds[0].shape
+    nboxes //= 2
+    print(f"INFO: nspec = {nspec}, nboxes={nboxes}")
+    nlines = len(lines)
+
+    # Doing non BAL lines first
+    c_line = np.zeros((nlines, nspec))
+    z_line = np.zeros_like(c_line) # This ensures they're always the same shape.
+    i_to_wave = lambda x: np.interp(x, np.arange(len(wave)), wave)
+
+    for il, line in enumerate(lines):
+        l = absorber_IGM[line]
+
+        # j is the box number, offset is how far into the box the line is predicted to be
+        j = preds[il][:, :13].argmax(axis=1)
+        offset  = preds[il][np.arange(nspec, dtype=int), nboxes + j]
+
+        # Confidence in line, redshift of line
+        c_line[il] = preds[il][:, :13].max(axis=1)
+        z_line[il] = (i_to_wave((j + offset) * len(wave) / nboxes) / l) - 1
+
+    # Not "best redshift", rather "redshift of most confident line"
+    zbest = z_line[c_line.argmax(axis=0), np.arange(nspec)]
+    zbest = np.array(zbest)
+
+    # Code for BAL boxes is the same as above just run on the BAL lines.
+    nlines_bal = len(lines_bal)
+    c_line_bal = np.zeros((nlines_bal, nspec))
+    z_line_bal = np.zeros_like(c_line_bal)
+
+    for il, line in enumerate(lines_bal):
+        l = absorber_IGM[line]
+
+        j = preds[nlines+il][:, :13].argmax(axis=1)
+        offset  = preds[il+nlines][np.arange(nspec, dtype=int), nboxes + j]
+
+        c_line_bal[il] = preds[il + nlines][:, :13].max(axis=1)
+        z_line_bal[il] = (i_to_wave((j + offset) * len(wave) / nboxes) / l) - 1
+
+    return c_line, z_line, zbest, c_line_bal, z_line_bal
