@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='quasarnp',
@@ -8,6 +8,7 @@ setup(
     author='Dylan Green',
     author_email='dylanag@uci.edu',
     license='MIT',
+    packages=find_packages(),
     install_requires=['numpy', 'scipy', 'fitsio', 'h5py'],
     zip_safe=False,
 )
