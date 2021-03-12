@@ -10,6 +10,14 @@ def load_file(filename):
     with h5py.File(filename, "r") as f:
         m_weights = f['model_weights']
 
+        # Some versions of TF/Keras are 1 indexed and so bn layers start
+        # at batch_normalization_1. Some versions are 0 indexed and start at
+        # batch_normalization. Former is easer to account for in
+        # model object since it is of consistent form. Thus we modify names
+        # to match that syntax.
+        if "batch_normalization" in m_weights:
+            inc = True
+
         for k1, v1 in m_weights.items():
             if len(v1) == 0:
                 if k1 == "lambda":
@@ -19,11 +27,20 @@ def load_file(filename):
 
             data_dict = {}
             for k2, v2 in a.items():
-              # This :-2 strips off the :0 at the end of weights names.
+                # This :-2 strips off the :0 at the end of weights names.
                 data_dict[k2[:-2]] = v2[()]
 
-            result[k1] = data_dict
+            # Handles the 0 vs 1 indexed batch_norm (see note above)
+            name = k1
+            if "batch_normalization" in name:
+                if name == "batch_normalization":
+                    name = "batch_normalization_1"
+                elif inc:
+                    name = name[:-1] + str(int(name[-1:]) + 1)
 
+            result[name] = data_dict
+
+    print(result.keys())
     return result
 
 def load_model(filename):
