@@ -34,7 +34,7 @@ is done.
  in turn calls `read_desi_spectra`
  before doing some other things (which we will return to shortly)
 
- ### [`io.read_desi_spectra`]((https://github.com/jfarr03/QuasarNET/blob/master/py/quasarnet/io.py#L505))
+ ### [`io.read_desi_spectra`](https://github.com/jfarr03/QuasarNET/blob/master/py/quasarnet/io.py#L505)
  We first create a boolean array for indexing that will determine which spectra
  we keep and which we discard from the loaded file.
 If we pass a target bit (`tb`) then we set all indices where the QSO target bit
