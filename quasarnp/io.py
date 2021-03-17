@@ -15,7 +15,7 @@ def load_file(filename):
         # batch_normalization. Former is easer to account for in
         # model object since it is of consistent form. Thus we modify names
         # to match that syntax.
-        inf = False
+        inc = False
         if "batch_normalization" in m_weights:
             inc = True
 
