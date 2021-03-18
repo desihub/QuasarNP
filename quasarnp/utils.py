@@ -1,5 +1,4 @@
 import numpy as np
-from .io import wave
 
 # Absorbtion wavelengths
 absorber_IGM = {
@@ -43,6 +42,12 @@ absorber_IGM = {
     'OVI(1032)'   : 1031.912,
     'LYB'         : 1025.72,
 }
+
+l_min = np.log10(3600.)
+l_max = np.log10(10000.)
+dl = 1e-3
+nbins = int((l_max - l_min)/dl)
+wave = 10**(l_min + np.arange(nbins)*dl)
 
 def process_preds(preds, lines, lines_bal):
     '''
@@ -108,3 +113,28 @@ def process_preds(preds, lines, lines_bal):
         z_line_bal[il] = (i_to_wave((j + offset) * len(wave) / nboxes) / l) - 1
 
     return c_line, z_line, zbest, c_line_bal, z_line_bal
+
+def regrid(old_grid):
+    bins = np.floor((np.log10(old_grid) - l_min) / dl).astype(int)
+    w = (bins>=0) & (bins<nbins)
+
+    return bins, w
+
+
+def rebin(flux, ivar, w_grid):
+    new_grid, w = regrid(w_grid)
+
+    fl_iv = flux * ivar
+
+    # len(flux) will give number of spectra,
+    # len(new_grid) will give number of output bins
+    flux_out = np.zeros((len(flux), nbins))
+    ivar_out = np.zeros_like(flux_out)
+
+    for i in range(len(flux)):
+        c = np.bincount(new_grid, weights = fl_iv[i, :])
+        flux_out[i, :len(c)] += c
+        c = np.bincount(new_grid, weights = ivar[i, :])
+        ivar_out[i, :len(c)] += c
+
+    return flux_out, ivar_out

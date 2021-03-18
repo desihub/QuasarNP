@@ -1,8 +1,11 @@
+import os
+
 import fitsio
 import h5py
 import numpy as np
 
 from .model import QuasarNP
+from .utils import rebin
 
 def load_file(filename):
     result = {}
@@ -51,13 +54,6 @@ def load_model(filename):
     else:
         return QuasarNP(db)
 
-llmin = np.log10(3600)
-llmax = np.log10(10000)
-dll = 1e-3
-
-nbins = int((llmax-llmin)/dll)
-wave = 10**(llmin + np.arange(nbins)*dll)
-nmasked_max = len(wave)+1
 
 def read_truth(fi):
     '''
@@ -250,3 +246,51 @@ def read_data(fi, truth=None, z_lim=2.1,
         return tids,X,Y,z,bal,plate,mjd,fid
 
     return tids,X,Y,z,bal
+
+
+def load_desi_exposure(d, e, spec_number, nfibers=500):
+    # For now load cascades cframes files
+    # Can/should be changed later.
+    # TODO: Add support for loading by tile id + e rather than date + e
+    root = "/global/cfs/cdirs/desi/spectro/redux/cascades/exposures"
+    file_loc = os.path.join(root, d, e)
+
+    # Load each cam sequentially, then rebin and merge
+    # We will be rebinning down to 443, which is the input size of QuasarNet
+    X_out = np.zeros((nfibers, 443))
+
+    # ivar_out is the weights out, i.e. the ivar, we use this for normalization
+    ivar_out = np.zeros_like(X_out) # Use zeros_like so we only have to change one
+
+    cams = ["B", "R", "Z"]
+    for c in cams:
+        h = fitsio.FITS(os.path.join(file_loc, f"cframe-{c.lower()}{spec_number}-{e}.fits"))
+
+        # Load the flux and ivar
+        flux = h["FLUX"].read()[:nfibers, :]
+        ivar = h["IVAR"].read()[:nfibers, :]
+        w_grid = h["WAVELENGTH"].read()
+
+        # Rebin the flux and ivar
+        new_flux, new_ivar = rebin(flux, ivar, w_grid)
+
+        X_out += new_flux
+        ivar_out += new_ivar
+
+    non_zero = ivar_out != 0
+    X_out[non_zero] /= ivar_out[non_zero]
+
+    nonzero_weights = np.sum(ivar_out, axis=1) != 0
+    print(f"{nfibers - np.sum(nonzero_weights)} spectra with zero weights")
+    X_out = X_out[nonzero_weights]
+    ivar_out = ivar_out[nonzero_weights]
+
+    # axis=1 corresponds to the rebinned spectral axis
+    # Finding the weighted mean both for normalization and for the rms
+    mean = np.average(X_out, axis=1, weights=ivar_out)[:, None]
+    rms = np.sqrt(np.average((X_out - mean) ** 2 ,axis=1, weights=ivar_out))
+
+    # Normalize by subtracting the weighted mean and dividing by the rms
+    # as prescribed in the original QuasarNet paper.
+    X_out = (X_out - mean) / rms[:, None]
+    return X_out
