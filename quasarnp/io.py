@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import fitsio
 import h5py
@@ -248,26 +248,19 @@ def read_data(fi, truth=None, z_lim=2.1,
     return tids,X,Y,z,bal
 
 
-def load_desi_exposure(d, e, spec_number, fibers=np.ones(500, dtype="bool")):
-    # If you pass an int, load the first <fibers> fibers
-    if isinstance(fibers, int):
-        print("trig")
-        good_fibers = np.ones(fibers, dtype="bool")
-    else:
-        # In case you pass it as ints.
-        good_fibers = fibers.astype("bool")
-    assert len(good_fibers) == 500, "fibers input must include True/False for exactly 500 fibers."
+def load_desi_exposure(night, exp_id, spec_number, fibers=np.ones(500, dtype="bool")):
+    assert len(fibers) == 500, "fibers input must include True/False for all 500 fibers."
     assert 0 <= spec_number and spec_number <= 9, "spec_number must be between 0 and 9"
 
     # For now load cascades cframes files
     # Can/should be changed later.
     # TODO: Add support for loading by tile id + e rather than date + e
     root = "/global/cfs/cdirs/desi/spectro/redux/cascades/exposures"
-    file_loc = os.path.join(root, d, e)
+    file_loc = Path(root, night, exp_id)
 
     # Load each cam sequentially, then rebin and merge
     # We will be rebinning down to 443, which is the input size of QuasarNet
-    nfibers = np.sum(good_fibers)
+    nfibers = np.sum(fibers)
     X_out = np.zeros((nfibers, 443))
 
     # ivar_out is the weights out, i.e. the ivar, we use this for normalization
@@ -275,12 +268,12 @@ def load_desi_exposure(d, e, spec_number, fibers=np.ones(500, dtype="bool")):
 
     cams = ["B", "R", "Z"]
     for c in cams:
-        h = fitsio.FITS(os.path.join(file_loc, f"cframe-{c.lower()}{spec_number}-{e}.fits"))
-
-        # Load the flux and ivar
-        flux = h["FLUX"].read()[good_fibers, :]
-        ivar = h["IVAR"].read()[good_fibers, :]
-        w_grid = h["WAVELENGTH"].read()
+        im_path = file_loc / f"cframe-{c.lower()}{spec_number}-{exp_id}.fits"
+        with fitsio.FITS(im_path) as h:
+            # Load the flux and ivar
+            flux = h["FLUX"].read()[fibers, :]
+            ivar = h["IVAR"].read()[fibers, :]
+            w_grid = h["WAVELENGTH"].read()
 
         # Rebin the flux and ivar
         new_flux, new_ivar = rebin(flux, ivar, w_grid)
