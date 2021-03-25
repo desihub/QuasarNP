@@ -44,7 +44,6 @@ def load_file(filename):
 
             result[name] = data_dict
 
-    print(result.keys())
     return result
 
 def load_model(filename):
@@ -248,15 +247,12 @@ def read_data(fi, truth=None, z_lim=2.1,
     return tids,X,Y,z,bal
 
 
-def load_desi_exposure(night, exp_id, spec_number, fibers=np.ones(500, dtype="bool")):
+def load_desi_exposure(dir_name, spec_number, fibers=np.ones(500, dtype="bool")):
     assert len(fibers) == 500, "fibers input must include True/False for all 500 fibers."
     assert 0 <= spec_number and spec_number <= 9, "spec_number must be between 0 and 9"
 
-    # For now load cascades cframes files
-    # Can/should be changed later.
-    # TODO: Add support for loading by tile id + e rather than date + e
-    root = "/global/cfs/cdirs/desi/spectro/redux/cascades/exposures"
-    file_loc = Path(root, night, exp_id)
+    file_loc = Path(dir_name)
+    exp_id = file_loc.parts[-1]
 
     # Load each cam sequentially, then rebin and merge
     # We will be rebinning down to 443, which is the input size of QuasarNet
@@ -298,3 +294,16 @@ def load_desi_exposure(night, exp_id, spec_number, fibers=np.ones(500, dtype="bo
     # as prescribed in the original QuasarNet paper.
     X_out = (X_out - mean) / rms
     return X_out, np.where(nonzero_weights)[0]
+
+
+def load_desi_daily(night, exp_id, spec_number, fibers=np.ones(500, dtype="bool")):
+    assert len(fibers) == 500, "fibers input must include True/False for all 500 fibers."
+    assert 0 <= spec_number and spec_number <= 9, "spec_number must be between 0 and 9"
+
+    # For now load daily cframes files
+    # TODO: add support for loading arbitrary cframes.
+    # TODO: Add support for loading by tile id + e rather than date + e
+    root = "/global/cfs/cdirs/desi/spectro/redux/daily/exposures"
+    file_loc = Path(root, night, exp_id)
+
+    return load_desi_exposure(file_loc, spec_number, fibers)
