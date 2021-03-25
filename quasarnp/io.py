@@ -256,7 +256,7 @@ def load_desi_exposure(dir_name, spec_number, fibers=np.ones(500, dtype="bool"))
 
     # Load each cam sequentially, then rebin and merge
     # We will be rebinning down to 443, which is the input size of QuasarNet
-    nfibers = np.sum(fibers)
+    nfibers = np.sum(fibers > 0)
     X_out = np.zeros((nfibers, 443))
 
     # ivar_out is the weights out, i.e. the ivar, we use this for normalization
