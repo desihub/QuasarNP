@@ -292,9 +292,9 @@ def load_desi_exposure(night, exp_id, spec_number, fibers=np.ones(500, dtype="bo
     # axis=1 corresponds to the rebinned spectral axis
     # Finding the weighted mean both for normalization and for the rms
     mean = np.average(X_out, axis=1, weights=ivar_out)[:, None]
-    rms = np.sqrt(np.average((X_out - mean) ** 2 ,axis=1, weights=ivar_out))
+    rms = np.sqrt(np.average((X_out - mean) ** 2 ,axis=1, weights=ivar_out))[:, None]
 
     # Normalize by subtracting the weighted mean and dividing by the rms
     # as prescribed in the original QuasarNet paper.
-    X_out = (X_out - mean) / rms[:, None]
-    return X_out
+    X_out = (X_out - mean) / rms
+    return X_out, np.where(nonzero_weights)[0]
