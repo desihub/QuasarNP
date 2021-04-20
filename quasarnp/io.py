@@ -314,11 +314,11 @@ def load_desi_coadd(filename, fibers=np.ones(500,dtype="bool")):
             ivar = h[ivarname].read()[fibers, :]
             w_grid = h[wname].read()
 
-        # Rebin the flux and ivar
-        new_flux, new_ivar = rebin(flux, ivar, w_grid)
+            # Rebin the flux and ivar
+            new_flux, new_ivar = rebin(flux, ivar, w_grid)
 
-        X_out += new_flux
-        ivar_out += new_ivar
+            X_out += new_flux
+            ivar_out += new_ivar
 
     non_zero = ivar_out != 0
     X_out[non_zero] /= ivar_out[non_zero]
