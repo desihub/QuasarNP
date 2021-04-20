@@ -296,7 +296,7 @@ def load_desi_exposure(dir_name, spec_number, fibers=np.ones(500, dtype="bool"))
     return X_out, np.where(nonzero_weights)[0]
 
 def load_desi_coadd(filename, fibers=np.ones(500,dtype="bool")):
-     """Writes the zcat structured array out as a FITS file.
+    """Loads a DESI coadd file for process by utils.process_preds().
     
     Parameters
     ----------
