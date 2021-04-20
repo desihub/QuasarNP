@@ -66,6 +66,8 @@ def process_preds(preds, lines, lines_bal):
         line redshifts, shape: (nlines, nspec)
     zbest: float, array
         redshift of highest confidence line, shape: (nspec)
+    cbest: float, array
+        confidence of highest confidence line, shape: (nspec)
     c_line_bal: float, array
         line confidences of BAL lines, shape: (nlines_bal, nspec)
     z_line_bal: float, array

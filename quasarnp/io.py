@@ -296,7 +296,24 @@ def load_desi_exposure(dir_name, spec_number, fibers=np.ones(500, dtype="bool"))
     return X_out, np.where(nonzero_weights)[0]
 
 def load_desi_coadd(filename, fibers=np.ones(500,dtype="bool")):
-
+     """Writes the zcat structured array out as a FITS file.
+    
+    Parameters
+    ----------
+    filename : :class:'str'
+        The fullpath and filename of the coadd file to be loaded.
+    fibers : :class:'numpy.array'
+        A boolean array of which fibers to use in a coadd file.
+        May be deprecated later.
+        
+    Returns
+    -------
+    X-out : :class:'numpy.array'
+        The coadd data across cameras stitched together for 
+        processing by utils.process_preds()
+    :class:'numpy.array'
+        Indices of fibers with non-zero weights.
+    """
     # Load each cam sequentially, then rebin and merge
     # We will be rebinning down to 443, which is the input size of QuasarNet
     nfibers = np.sum(fibers > 0)
