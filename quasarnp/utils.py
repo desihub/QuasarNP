@@ -66,8 +66,6 @@ def process_preds(preds, lines, lines_bal):
         line redshifts, shape: (nlines, nspec)
     zbest: float, array
         redshift of highest confidence line, shape: (nspec)
-    cbest: float, array
-        confidence of highest confidence line, shape: (nspec)
     c_line_bal: float, array
         line confidences of BAL lines, shape: (nlines_bal, nspec)
     z_line_bal: float, array
@@ -98,9 +96,7 @@ def process_preds(preds, lines, lines_bal):
 
     # Not "best redshift", rather "redshift of most confident line"
     zbest = z_line[c_line.argmax(axis=0), np.arange(nspec)]
-    cbest = c_line[c_line.argmax(axis=0), np.arange(nspec)]
     zbest = np.array(zbest)
-    cbest = np.array(cbest)
 
     # Code for BAL boxes is the same as above just run on the BAL lines.
     nlines_bal = len(lines_bal)
@@ -116,7 +112,7 @@ def process_preds(preds, lines, lines_bal):
         c_line_bal[il] = preds[il + nlines][:, :13].max(axis=1)
         z_line_bal[il] = (i_to_wave((j + offset) * len(wave) / nboxes) / l) - 1
 
-    return c_line, z_line, zbest, cbest, c_line_bal, z_line_bal
+    return c_line, z_line, zbest, c_line_bal, z_line_bal
 
 def regrid(old_grid):
     bins = np.floor((np.log10(old_grid) - l_min) / dl).astype(int)

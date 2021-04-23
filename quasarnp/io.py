@@ -295,16 +295,16 @@ def load_desi_exposure(dir_name, spec_number, fibers=np.ones(500, dtype="bool"))
     X_out = (X_out - mean) / rms
     return X_out, np.where(nonzero_weights)[0]
 
-def load_desi_coadd(filename, fibers=np.ones(500,dtype="bool")):
+def load_desi_coadd(filename, rows=None):
     """Loads a DESI coadd file for process by utils.process_preds().
     
     Parameters
     ----------
     filename : :class:'str'
         The fullpath and filename of the coadd file to be loaded.
-    fibers : :class:'numpy.array'
-        A boolean array of which fibers to use in a coadd file.
-        May be deprecated later.
+    rows : :class:'numpy.array'
+        A boolean array of which rows to use in a coadd file. If
+        none are specified, it will use all rows.
         
     Returns
     -------
@@ -316,19 +316,26 @@ def load_desi_coadd(filename, fibers=np.ones(500,dtype="bool")):
     """
     # Load each cam sequentially, then rebin and merge
     # We will be rebinning down to 443, which is the input size of QuasarNet
-    nfibers = np.sum(fibers > 0)
-    X_out = np.zeros((nfibers, 443))
+    #nfibers = np.sum(rows > 0)
+    #X_out = np.zeros((nfibers, 443))
 
     # ivar_out is the weights out, i.e. the ivar, we use this for normalization
-    ivar_out = np.zeros_like(X_out) # Use zeros_like so we only have to change one
+    #ivar_out = np.zeros_like(X_out) # Use zeros_like so we only have to change one
 
     cams = ["B", "R", "Z"]
     with fitsio.FITS(filename) as h:
+        if rows == None:
+            nfibers = len(h['B_FLUX'].read())
+            rows = np.ones(nfibers,dtype='bool')
+        else:
+            nfibers = np.sum(rows > 0)
+        X_out = np.zeros((nfibers, 443))
+        ivar_out = np.zeros_like(X_out) # Use zeros_like so we only have to change one
         for c in cams:
             fluxname,ivarname,wname = f"{c}_FLUX", f"{c}_IVAR", f"{c}_WAVELENGTH"
             # Load the flux and ivar
-            flux = h[fluxname].read()[fibers, :]
-            ivar = h[ivarname].read()[fibers, :]
+            flux = h[fluxname].read()[rows, :]
+            ivar = h[ivarname].read()[rows, :]
             w_grid = h[wname].read()
 
             # Rebin the flux and ivar
