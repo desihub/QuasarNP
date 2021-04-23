@@ -314,22 +314,17 @@ def load_desi_coadd(filename, rows=None):
     :class:'numpy.array'
         Indices of fibers with non-zero weights.
     """
-    # Load each cam sequentially, then rebin and merge
-    # We will be rebinning down to 443, which is the input size of QuasarNet
-    #nfibers = np.sum(rows > 0)
-    #X_out = np.zeros((nfibers, 443))
-
-    # ivar_out is the weights out, i.e. the ivar, we use this for normalization
-    #ivar_out = np.zeros_like(X_out) # Use zeros_like so we only have to change one
-
     cams = ["B", "R", "Z"]
     with fitsio.FITS(filename) as h:
+        # Load each cam sequentially, then rebin and merge
+        # We will be rebinning down to 443, which is the input size of QuasarNet
         if rows == None:
             nfibers = len(h['B_FLUX'].read())
             rows = np.ones(nfibers,dtype='bool')
         else:
             nfibers = np.sum(rows > 0)
         X_out = np.zeros((nfibers, 443))
+        # ivar_out is the weights out, i.e. the ivar, we use this for normalization
         ivar_out = np.zeros_like(X_out) # Use zeros_like so we only have to change one
         for c in cams:
             fluxname,ivarname,wname = f"{c}_FLUX", f"{c}_IVAR", f"{c}_WAVELENGTH"
