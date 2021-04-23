@@ -49,7 +49,7 @@ dl = 1e-3
 nbins = int((l_max - l_min)/dl)
 wave = 10**(l_min + np.arange(nbins)*dl)
 
-def process_preds(preds, lines, lines_bal):
+def process_preds(preds, lines, lines_bal, verbose=True):
     '''
     Convert network predictions to c_lines, z_lines and z_best
     Arguments:
@@ -59,6 +59,9 @@ def process_preds(preds, lines, lines_bal):
         list of line names
     lines_bal: string, array
         list of BAL line names
+    verbose : bool
+        optional argument to print number of spectra and
+        boxes to the terminal.
     Returns:
     c_line: float, array
         line confidences, shape: (nlines, nspec)
@@ -75,7 +78,8 @@ def process_preds(preds, lines, lines_bal):
 
     nspec, nboxes = preds[0].shape
     nboxes //= 2
-    print(f"INFO: nspec = {nspec}, nboxes={nboxes}")
+    if verbose:
+        print(f"INFO: nspec = {nspec}, nboxes={nboxes}")
     nlines = len(lines)
 
     # Doing non BAL lines first
