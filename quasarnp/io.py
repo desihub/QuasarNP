@@ -295,6 +295,68 @@ def load_desi_exposure(dir_name, spec_number, fibers=np.ones(500, dtype="bool"))
     X_out = (X_out - mean) / rms
     return X_out, np.where(nonzero_weights)[0]
 
+def load_desi_coadd(filename, rows=None):
+    """Loads a DESI coadd file for process by utils.process_preds().
+    
+    Parameters
+    ----------
+    filename : :class:'str'
+        The fullpath and filename of the coadd file to be loaded.
+    rows : :class:'numpy.array'
+        A boolean array of which rows to use in a coadd file. If
+        none are specified, it will use all rows.
+        
+    Returns
+    -------
+    X-out : :class:'numpy.array'
+        The coadd data across cameras stitched together for 
+        processing by utils.process_preds()
+    :class:'numpy.array'
+        Indices of fibers with non-zero weights.
+    """
+    cams = ["B", "R", "Z"]
+    with fitsio.FITS(filename) as h:
+        # Load each cam sequentially, then rebin and merge
+        # We will be rebinning down to 443, which is the input size of QuasarNet
+        if rows == None:
+            nfibers = len(h['B_FLUX'].read())
+            rows = np.ones(nfibers,dtype='bool')
+        else:
+            nfibers = np.sum(rows > 0)
+        X_out = np.zeros((nfibers, 443))
+        # ivar_out is the weights out, i.e. the ivar, we use this for normalization
+        ivar_out = np.zeros_like(X_out) # Use zeros_like so we only have to change one
+        for c in cams:
+            fluxname,ivarname,wname = f"{c}_FLUX", f"{c}_IVAR", f"{c}_WAVELENGTH"
+            # Load the flux and ivar
+            flux = h[fluxname].read()[rows, :]
+            ivar = h[ivarname].read()[rows, :]
+            w_grid = h[wname].read()
+
+            # Rebin the flux and ivar
+            new_flux, new_ivar = rebin(flux, ivar, w_grid)
+
+            X_out += new_flux
+            ivar_out += new_ivar
+
+    non_zero = ivar_out != 0
+    X_out[non_zero] /= ivar_out[non_zero]
+
+    nonzero_weights = np.sum(ivar_out, axis=1) != 0
+    #print(f"{nfibers - np.sum(nonzero_weights)} spectra with zero weights")
+    X_out = X_out[nonzero_weights]
+    ivar_out = ivar_out[nonzero_weights]
+
+    # axis=1 corresponds to the rebinned spectral axis
+    # Finding the weighted mean both for normalization and for the rms
+    mean = np.average(X_out, axis=1, weights=ivar_out)[:, None]
+    rms = np.sqrt(np.average((X_out - mean) ** 2 ,axis=1, weights=ivar_out))[:, None]
+
+    # Normalize by subtracting the weighted mean and dividing by the rms
+    # as prescribed in the original QuasarNet paper.
+    X_out = (X_out - mean) / rms
+    return X_out, np.where(nonzero_weights)[0]
+
 
 def load_desi_daily(night, exp_id, spec_number, fibers=np.ones(500, dtype="bool")):
     assert len(fibers) == 500, "fibers input must include True/False for all 500 fibers."
