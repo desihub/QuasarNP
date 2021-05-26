@@ -1,8 +1,26 @@
+"""A module defining the QuasarNP model object.
+
+QuasarNP is a pure numpy implementation of the original TensorFlow
+QuasarNet. This module only defines the QuasarNP model object and provides
+no other functionality on its own.
+"""
 import numpy as np
 
 from .layers import conv1d, batch_normalization, dense, flatten, relu, sigmoid, linear
 
 class QuasarNP():
+    """A QuasarNP model object. The model holds all of the relevant layer
+    information, including layer names, weights and definitions.
+
+    Parameters
+    ----------
+    weights : dict
+        Dictionary that maps layer names to layer weights.
+    nlines : int, optional
+        Number of lines this model was trained for. Defaults to 7.
+    rescale : bool, optional
+        Whether or not to rescale the output of the box layers. Defaults to False.
+    """
     def __init__(self, weights, nlines=7, rescale=False):
         # Store the weights to access later.
         self.weights = weights
@@ -39,6 +57,29 @@ class QuasarNP():
         return relu(y)
 
     def predict(self, x_input):
+        """Run a set of spectra and generate predictions.
+
+        Parameters
+        ----------
+        x_input : numpy.ndarray
+            Input array of spectra, with shape `(nspectra, nbins, 1)`
+
+        Returns
+        -------
+        list of numpy.ndarray
+            Moodel predicted values per trained line, with length  `nlines`.
+
+        Notes
+        -----
+        In order to mimic QuasarNet behaviour in QuasarNP, `predict` does not
+        directly take as input the output of `load_desi_exposure` or
+        `load_desi_daily`. You must first expand the dimensions of the loaded
+        data before loading. For example:
+
+        >>> data, w = load_desi_daily("20210107", "00071246", 1)
+        >>> data = data[:, :, None]
+        >>> model.predict(data)
+        """
         x_output = np.copy(x_input) # To avoid side effects
         for name in self.convs:
             x_output = self.conv_layer(x_output, name)
@@ -60,5 +101,6 @@ class QuasarNP():
 
         return outputs
 
+    # This definition is here to mimic Tensorflow/QuasarNet behaviour.
     def __call__(self, x_input):
         return self.predict(x_input)
