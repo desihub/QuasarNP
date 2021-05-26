@@ -1,6 +1,14 @@
+"""A module containing facilities for rebinning data and processing QuasarNP output.
+
+There are three methods in this module, one that will process the output of
+QuasarNP into a human parsable form, and two that are used to rebin the DESI
+wavelength grid into the QuasarNet wavelength grid. In addition, there is
+a global dictionary that maps emission line names to their rest wavelength.
+"""
+
 import numpy as np
 
-# Absorbtion wavelengths
+# Absorption wavelengths
 absorber_IGM = {
     'Halpha'      : 6562.8,
     'OIII(5008)'  : 5008.24,
@@ -43,37 +51,51 @@ absorber_IGM = {
     'LYB'         : 1025.72,
 }
 
+# TODO: Make these editable and expose them publicly.
+# Perhaps in the same way Farr did?
 l_min = np.log10(3600.)
 l_max = np.log10(10000.)
 dl = 1e-3
-nbins = int((l_max - l_min)/dl)
-wave = 10**(l_min + np.arange(nbins)*dl)
+nbins = int((l_max - l_min) / dl)
+wave = 10**(l_min + np.arange(nbins) * dl)
 
 def process_preds(preds, lines, lines_bal, verbose=True):
-    '''
-    Convert network predictions to c_lines, z_lines and z_best
-    Arguments:
-    preds: float, array
-        model predictions, output of model.predict
-    lines: string, array
-        list of line names
-    lines_bal: string, array
-        list of BAL line names
-    verbose : bool
-        optional argument to print number of spectra and
-        boxes to the terminal.
-    Returns:
-    c_line: float, array
-        line confidences, shape: (nlines, nspec)
-    z_line: float, array
-        line redshifts, shape: (nlines, nspec)
-    zbest: float, array
-        redshift of highest confidence line, shape: (nspec)
-    c_line_bal: float, array
-        line confidences of BAL lines, shape: (nlines_bal, nspec)
-    z_line_bal: float, array
-        line redshfits of BAL lines, shape: (nlines_bal, nspec)
-    '''
+    """Convert network output to line confidence and redshift predictions.
+
+    Parameters
+    ----------
+        preds : numpy.ndarray
+            Model prediction, output of `model.predict`.
+        lines : list of str
+            List of line names.
+        lines_bal : list of str
+            List of BAL line names.
+        verbose : bool, optional
+            Whether or not to print verbose debug output. Defaults to True.
+
+    Returns
+    -------
+        c_line : numpy.ndarray
+            Confidence that each line appears in the given spectra, with
+            shape `(nlines, nspec)`.
+        z_line : numpy.ndarray
+            Estimated redshift of the spectra derived from each line, with
+            shape `(nlines, nspec)`.
+        zbest : numpy.ndarray
+            Redshift of the most confident line for each spectra with length
+            `nspec`.
+        c_line_bal : numpy.ndarray
+            Confidence that each BAL line appears in the given spectra, with
+            shape `(nlines_bal, nspec)`.
+        z_line_bal : numpy.ndarray
+            Estimated redshift of the spectra derived from each BAL line, with
+            shape `(nlines_bal, nspec)`.
+
+    Notes
+    -----
+    This method determines the number of trained lines and BAL lines by setting
+    `nlines = len(lines)` and `nlines_bal = len(lines_bal)`.
+    """
     assert len(lines) + len(lines_bal) == len(preds), "Total number of lines does not match number of predictions!"
 
     nspec, nboxes = preds[0].shape
@@ -119,6 +141,23 @@ def process_preds(preds, lines, lines_bal, verbose=True):
     return c_line, z_line, zbest, c_line_bal, z_line_bal
 
 def regrid(old_grid):
+    """Generate the mapping from the old wavelength grid to the QuasarNet grid.
+
+    Parameters
+    ----------
+    old_grid : numpy.ndarray
+        The old wavelength grid.
+
+    Returns
+    -------
+    bins : numpy.ndarray
+        Array of length `len(old_grid)` where each element is the bin number
+        in the new grid that the old wavelength bin is assigned to.
+    w : numpy.ndarray
+        Array of length `len(old_grid)` where each element is True if the old
+        wavelength bin is contained within the new grid boundaries and False if
+        it is not.
+    """
     bins = np.floor((np.log10(old_grid) - l_min) / dl).astype(int)
     w = (bins>=0) & (bins<nbins)
 
@@ -126,6 +165,34 @@ def regrid(old_grid):
 
 
 def rebin(flux, ivar, w_grid):
+    """Rebin flux to the QuasarNet wavelength grid.
+
+    The process for rebinning flux is as follows. First, the flux is multiplied
+    by the ivar. Then, each bin from the old wavelength grid is assigned to
+    a new bin on the new grid. The `flux*ivar` assigned to each new bin
+    is summed and stored. The `ivar` assigned to each bin is also summed and
+    stored. These rebinned values are then returned.
+
+    Parameters
+    ----------
+    flux : numpy.ndarray
+        Input flux array of shape `(nspec, len(w_grid))`.
+    ivar : numpy.ndarray
+        Input ivar array of shape `(nspec, len(w_grid))`.
+    w_grid: numpy.ndarray
+        Input wavelength grid.
+
+    Returns
+    -------
+    flux_out : numpy.ndarray
+        Input flux rebinned onto the QuasarNet wavelength grid.
+    ivar_out : numpy.ndarray
+        Input ivar rebinned onto the QuasarNet wavelength grid.
+
+    See Also
+    --------
+    regrid : Function that converts the old wavelength grid to the new grid.
+    """
     new_grid, w = regrid(w_grid)
 
     fl_iv = flux * ivar
