@@ -1,3 +1,12 @@
+"""A module containing facilities for loading data and QuasarNP models.
+
+Methods are provided for separately loading a QuasarNP model from a weights file
+as well as loading DESI data, both by exposure number and by directory. A method
+is also provided to load a DESI coadd file. Two legacy methods are provided to
+interop with SDSS data: one to load a truth table and one to load a SDSS data
+file.
+"""
+
 from pathlib import Path
 
 import fitsio
@@ -8,6 +17,17 @@ from .model import QuasarNP
 from .utils import rebin
 
 def load_file(filename):
+    """Load a weights file as a dictionary.
+
+    Parameters
+    ----------
+    filename : str
+        The name of the weights file.
+    Returns
+    -------
+    dict
+        Dictionary that maps layer names to layer weights.
+    """
     result = {}
 
     with h5py.File(filename, "r") as f:
@@ -47,6 +67,17 @@ def load_file(filename):
     return result
 
 def load_model(filename):
+    """Load a weights file and return a callable model object.
+
+    Parameters
+    ----------
+    filename : str
+        The name of the weights file.
+    Returns
+    -------
+    QuasarNP
+        Callable QuasarNP model with the weights provided by `filename`.
+    """
     db = load_file(filename)
     if "lambda" in db:
         return QuasarNP(db, rescale=True)
@@ -55,13 +86,20 @@ def load_model(filename):
 
 
 def read_truth(fi):
-    '''
-    reads a list of truth files and returns a truth dictionary
-    Arguments:
-        fi -- list of truth files (list of string)
-    Returns:
-        truth -- dictionary of THING_ID: metadata instance
-    '''
+    """ Read a list of truth files and return a dictionary of truth values.
+
+    This is a legacy function ported from QuasarNet, and is designed to load
+    SDSS data files to generate a truth table.
+
+    Parameters
+    ----------
+    fi : list of str
+        List of file names of truth files.
+    Returns
+    -------
+    dict
+        Dictionary that maps `thing_id` to truth metadata.
+    """
 
     class metadata:
         pass
@@ -85,26 +123,50 @@ def read_truth(fi):
 
     return truth
 
-def read_data(fi, truth=None, z_lim=2.1,
-        return_pmf=False, nspec=None):
-    '''
-    reads data from input file
-    Arguments:
-        fi -- list of data files (string iterable)
-        truth -- dictionary thind_id => metadata
-        z_lim -- hiz/loz cut (float)
-        return_pmf -- if True also return plate,mjd,fiberid
-        nspec -- read this many spectra
-    Returns:
-        tids -- list of thing_ids
-        X -- spectra reformatted to be fed to the network (numpy array)
-        Y -- truth vector (nqso, 5):
-                           STAR = (1,0,0,0,0), GAL = (0,1,0,0,0)
-                           QSO_LZ = (0,0,1,0,0), QSO_HZ = (0,0,0,1,0)
-                           BAD = (0,0,0,0,1)
-        z -- redshift (numpy array)
-        bal -- 1 if bal, 0 if not (numpy array)
-    '''
+def read_data(fi, truth=None, z_lim=2.1, return_pmf=False, nspec=None):
+    """Read data from input file.
+
+    This is a legacy function ported from QuasarNet, and is designed to load
+    SDSS data files.
+    Returns a tuple containing (tids, X, Y, z, bal) if `return_pmf` is `False`,
+    otherwise returns a tuple containing (tids, X, Y, z, bal, plate, mjd, fid).
+
+    Parameters
+    ----------
+    fi : list of str
+        List of data files to load.
+    truth : dict, optional
+        Dictionary that maps `thing_id`` to truth metadata.
+    z_lim : float, optional
+        Redshift to use when applying a z-cut. Defaults to 2.1.
+    return_pmf : bool, optional
+        Whether or not to return the `plate`, `mjd` and `fiberid`. Defaults to False.
+    nspec : int, optional
+        Number of spectra to read. Defaults to None (all spectra)
+
+    Returns
+    -------
+    tids : list of float
+        A list of `thing_id`.
+    X : numpy.ndarray
+        Renormalized and rebinned spectra.
+    Y : numpy.ndarray
+        Classification vector of shape (`nqso`, 5) with the following entries:
+                        STAR = (1,0,0,0,0), GAL = (0,1,0,0,0)
+                        QSO_LZ = (0,0,1,0,0), QSO_HZ = (0,0,0,1,0)
+                        BAD = (0,0,0,0,1)
+    z : numpy.ndarray
+        Array of redshifts.
+    bal : numpy.ndarray
+        Truth array indicating whether each QSO is a BAL QSO or not. Each element
+        is set to `1` if True or `0` if False.
+    plate : numpy.ndarray
+        Array of plate ids. Only returned when `return_pmf` is True.
+    mjd : numpy.ndarray
+        Array of mean julien dates. Only returned when `return_pmf` is True.
+    fid : float
+        Array of fiber ids. Only returned when `return_pmf` is True.
+    """
 
     tids = []
     X = []
@@ -248,6 +310,40 @@ def read_data(fi, truth=None, z_lim=2.1,
 
 
 def load_desi_exposure(dir_name, spec_number, fibers=np.ones(500, dtype="bool")):
+    """Load and renormalize a raw DESI spectrographic exposure.
+
+    This method will load B, R and Z cframe files in sequence. First, spectra are
+    rebinned to the QuasarNet wavelength grid. Rebinned spectra are divided by
+    the rebinned IVAR to reweight the spectra. Next, rebinned spectra are
+    normalized by subtracting the weighted mean of the spectra and then dividing
+    the resultant spectra by its weighted rms. The rebinned IVAR is used for
+    weighting. Any spectra where the IVAR is 0 for the entire wavelength grid
+    is discarded.
+
+    Parameters
+    ----------
+    dir_name : str
+        Directory to load exposure from.
+    spec_number : int
+        Spectrograph number to load.
+    fibers : numpy.ndarray, optional.
+        Array of length 500 indicating whether each fiber should be loaded. True
+        if the fiber should be loaded, False otherwise. Defaults to True for all
+        500 fibers.
+
+    Returns
+    -------
+    X_out : numpy.ndarray
+        Renormalized and rebinned spectra. Output spectra will have shape
+        `(nspectra, nbins)` where `nbins=443` for the QuasarNet wavelength grid.
+    w : numpy.ndarray
+        Array of length `sum(fibers == True)` where each element is True if the spectra
+        was kept in `X_out` and False if the spectra was discarded.
+
+    See Also
+    ---------
+    load_desi_daily : Load a daily exposure.
+    """
     assert len(fibers) == 500, "fibers input must include True/False for all 500 fibers."
     assert 0 <= spec_number and spec_number <= 9, "spec_number must be between 0 and 9"
 
@@ -296,23 +392,37 @@ def load_desi_exposure(dir_name, spec_number, fibers=np.ones(500, dtype="bool"))
     return X_out, np.where(nonzero_weights)[0]
 
 def load_desi_coadd(filename, rows=None):
-    """Loads a DESI coadd file for process by utils.process_preds().
-    
+    """Load and renormalize a DESI coadded spectrographic exposure.
+
+    This method will load a coadd file and renormalize as follows. First, spectra are
+    rebinned to the QuasarNet wavelength grid. Rebinned spectra are divided by
+    the rebinned IVAR to reweight the spectra. Next, rebinned spectra are
+    normalized by subtracting the weighted mean of the spectra and then dividing
+    the resultant spectra by its weighted rms. The rebinned IVAR is used for
+    weighting. Any spectra where the IVAR is 0 for the entire wavelength grid
+    is discarded.
+
     Parameters
     ----------
-    filename : :class:'str'
-        The fullpath and filename of the coadd file to be loaded.
-    rows : :class:'numpy.array'
-        A boolean array of which rows to use in a coadd file. If
-        none are specified, it will use all rows.
-        
+    filename : str
+        Full path and filename of the coadd file to load.
+    rows : numpy.ndarray, optional.
+        Boolean array indicating whether each row should be loaded. True
+        if the row should be loaded, False otherwise. Defaults to None, which
+        loads all rows.
+
     Returns
     -------
-    X-out : :class:'numpy.array'
-        The coadd data across cameras stitched together for 
-        processing by utils.process_preds()
-    :class:'numpy.array'
-        Indices of fibers with non-zero weights.
+    X_out : numpy.ndarray
+        Renormalized and rebinned spectra. Output spectra will have shape
+        `(nspectra, nbins)` where `nbins=443` for the QuasarNet wavelength grid.
+    w : numpy.ndarray
+        Array of length `sum(rows == True)` where each element is True if the spectra
+        was kept in `X_out` and False if the spectra was discarded.
+
+    See Also
+    --------
+    load_desi_daily : Load a daily exposure.
     """
     cams = ["B", "R", "Z"]
     with fitsio.FITS(filename) as h:
@@ -359,6 +469,43 @@ def load_desi_coadd(filename, rows=None):
 
 
 def load_desi_daily(night, exp_id, spec_number, fibers=np.ones(500, dtype="bool")):
+    """Load and renormalize a daily DESI spectrographic exposure.
+
+    This method will load B, R and Z cframe files in sequence. First, spectra are
+    rebinned to the QuasarNet wavelength grid. Rebinned spectra are divided by
+    the rebinned IVAR to reweight the spectra. Next, rebinned spectra are
+    normalized by subtracting the weighted mean of the spectra and then dividing
+    the resultant spectra by its weighted rms. The rebinned IVAR is used for
+    weighting. Any spectra where the IVAR is 0 for the entire wavelength grid
+    is discarded.
+
+    Parameters
+    ----------
+    night : int or str
+        Night on which the exposure was taken.
+    exp_id : str
+        Exposure ID of the exposure.
+    spec_number : int
+        Spectrograph number to load.
+    fibers : numpy.ndarray, optional.
+        Array of length 500 indicating whether each fiber should be loaded. True
+        if the fiber should be loaded, False otherwise. Defaults to True for all
+        500 fibers.
+
+    Returns
+    -------
+    X_out : numpy.ndarray
+        Renormalized and rebinned spectra. Output spectra will have shape
+        `(nspectra, nbins)` where `nbins=443` for the QuasarNet wavelength grid.
+    w : numpy.ndarray
+        Array of length `sum(fibers == True)` where each element is True if the spectra
+        was kept in `X_out` and False if the spectra was discarded.
+
+    See Also
+    --------
+    load_desi_exposure : Used by load_desi_daily to load the given exposure.
+    load_desi_coadd : Load a coadded exposure.
+    """
     assert len(fibers) == 500, "fibers input must include True/False for all 500 fibers."
     assert 0 <= spec_number and spec_number <= 9, "spec_number must be between 0 and 9"
 
