@@ -1,3 +1,10 @@
+"""A module defining numpy implementations of the four layers used in QuasarNet.
+
+In addition to the four layers defined here (dense, batch_normalization, conv1d
+and flatten), this module defines three activation functions necessary to
+replicate the behaviour of QuasarNet. These three activation functions are the
+relu, linear and sigmoid activation functions.
+"""
 import numpy as np
 
 # Useful
@@ -12,6 +19,28 @@ sigmoid = lambda x: 1 / (1 + np.exp(-x))
 # Make sure that TF does x@w and not w@x
 # ^ Confirmed via weights saved in hdf5 file
 def dense(x, w, b, phi):
+    """Computes a dense layer operation on the input data.
+
+    This function implements a single dense layer for a neural network. The input
+    data is dotted with the weights vector. The bias is added to the output.
+    Finally, the activation function is run over the data and the result is returned.
+
+    Parameters
+    ----------
+    x : numpy.ndarray
+        Input data.
+    w : numpy.ndarray
+        Weights vector.
+    b : numpy.ndarray
+        Bias vector.
+    phi : function
+        Activation function to apply to the output.
+
+    Returns
+    -------
+    numpy.ndarray
+        Output of the dense layer.
+    """
     return phi(x @ w + b)
 
 # This uses the "moving mean" which is compiled from the training set
@@ -20,15 +49,78 @@ def dense(x, w, b, phi):
 # This has same behavior as:
 # https://www.tensorflow.org/api_docs/python/tf/nn/batch_normalization
 def batch_normalization(x, mean, var, beta, gamma, epsilon):
+    """Computes the batch normalized version of the input.
+
+    This function implements a batch normalization layer. Batch normalization
+    renormalizes the input to the layer to a more parsable data range.
+
+    Parameters
+    ----------
+    x : numpy.ndarray
+        Input data.
+    mean : numpy.ndarray
+        Moving mean of the dataset, computed during training.
+    var : numpy.ndarray
+        Moving variance of the dataset, computer during training.
+    beta : array_like
+        Offset value added to the normalized output.
+    gamma : array_like
+        Scale value to rescale the normalized output.
+    epsilon : float
+        Small constant for numerical stability.
+
+    Returns
+    -------
+    numpy.ndarray
+        Output of batch normalization.
+
+    Notes
+    -----
+    The operation implemented in this function is:
+
+    .. math:: \\frac{\gamma (x - \mu)}{\sigma} + \\beta
+
+    where :math:`\mu` is the moving mean of the dataset and :math:`\sigma` is
+    the moving variance of the dataset, both of which are computed during
+    training.
+
+    More details and documentation on the TensorFlow batch_normalization
+    function that this function mimics can be found at
+    https://www.tensorflow.org/api_docs/python/tf/nn/batch_normalization.
+    """
     return ((x - mean) / np.sqrt(var + epsilon)) * gamma + beta
 
-# Not the fasted possible implementation since this does
-# O(stride) more computations than necessary
 # This assumes x and w are in the exact form you would pass
 # them to tf.nn.conv1d for example
 # This has same behavior as:
 # https://www.tensorflow.org/api_docs/python/tf/nn/conv1d
 def conv1d(x, w, stride=1, b=None):
+    """Computes a 1-d convolution given 3-d input and weight arrays.
+
+    Parameters
+    ----------
+    x : numpy.ndarray
+        Input data of shape `(batch_size, in_width, in_channels)`
+    w : numpy.ndarray
+        Weights array of shape `(filter_width, in_channels, out_channels)`
+    stride : int, optional
+        The number of entries by which the filter is moved at each step.
+        Defaults to 1.
+    b : numpy.ndarray, optional
+        Bias array to be added to the output data. Defaults to None.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array output of the convolution step with shape
+        `(batch_size, out_width, out_channels)`.
+
+    Notes
+    -----
+    More details and documentation on the TensorFlow conv1d function that this
+    function mimics can be found at
+    https://www.tensorflow.org/api_docs/python/tf/nn/conv1d.
+    """
     assert type(stride) is int, "Integer strides only!"
 
     # Getting some layer variables for use so we don't have to keep getting them
@@ -74,4 +166,20 @@ def conv1d(x, w, stride=1, b=None):
 # Flattening layer, need to only flatten along dimensions
 # that are not the batch size dimension.
 def flatten(x):
+    """Flatten an array of data.
+
+    This function flattens an array in "C" like order, which is identical
+    to the process that TensorFlow's flatten function performs. Batch size is
+    not affected
+
+    Parameters
+    ----------
+    x : numpy.ndarray
+        Input data.
+
+    Returns
+    -------
+    numpy.ndarray
+        Flattened array.
+    """
     return x.reshape((x.shape[0], -1), order="C")
