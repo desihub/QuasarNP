@@ -1,4 +1,6 @@
 # QuasarNP
+[![Documentation Status](https://readthedocs.org/projects/quasarnp/badge/?version=latest)](https://quasarnp.readthedocs.io/en/latest/?badge=latest)
+
 QuasarNP is a pure numpy implementation of [QuasarNet](https://github.com/ngbusca/QuasarNET) that is designed to work on the default DESI environment at NERSC without any additional dependencies.
 
 Indeed, QuasarNP requires only three things to work:
