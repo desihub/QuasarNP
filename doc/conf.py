@@ -11,6 +11,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import re
 import sys
 sys.path.insert(0, os.path.abspath('..'))
 
@@ -22,7 +23,9 @@ copyright = '2021, Dylan Green'
 author = 'Dylan Green'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.0'
+line = open('../quasarnp/_version.py').readline().strip()
+m = re.match("__version__\s*=\s*'(.*)'", line)
+release = m.groups()[0]
 
 
 # -- General configuration ---------------------------------------------------
