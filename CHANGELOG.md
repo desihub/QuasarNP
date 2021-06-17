@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Fix a bug with `rows == None` sometimes not working as intended, and instead
 use `rows is None`
+- Fix PEP-8 style errors in io.py.
 
 
 ## [0.1.1] - 2021-06-04

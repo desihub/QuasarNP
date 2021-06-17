@@ -1,10 +1,10 @@
 """A module containing facilities for loading data and QuasarNP models.
 
-Methods are provided for separately loading a QuasarNP model from a weights file
-as well as loading DESI data, both by exposure number and by directory. A method
-is also provided to load a DESI coadd file. Two legacy methods are provided to
-interop with SDSS data: one to load a truth table and one to load a SDSS data
-file.
+Methods are provided for separately loading a QuasarNP model from a weights
+file as well as loading DESI data, both by exposure number and by directory.
+A method is also provided to load a DESI coadd file. Two legacy methods are
+provided to interop with SDSS data: one to load a truth table and one to
+load a SDSS data file.
 """
 
 from pathlib import Path
@@ -15,6 +15,7 @@ import numpy as np
 
 from .model import QuasarNP
 from .utils import rebin
+
 
 def load_file(filename):
     """Load a weights file as a dictionary.
@@ -66,6 +67,7 @@ def load_file(filename):
 
     return result
 
+
 def load_model(filename):
     """Load a weights file and return a callable model object.
 
@@ -104,24 +106,24 @@ def read_truth(fi):
     class metadata:
         pass
 
-    cols = ['Z_VI','PLATE',
-            'MJD','FIBERID','CLASS_PERSON',
-            'Z_CONF_PERSON','BAL_FLAG_VI','BI_CIV']
+    cols = ['Z_VI', 'PLATE', 'MJD', 'FIBERID', 'CLASS_PERSON',
+            'Z_CONF_PERSON', 'BAL_FLAG_VI', 'BI_CIV']
 
     truth = {}
 
     for f in fi:
         h = fitsio.FITS(f)
         tids = h[1]['THING_ID'][:]
-        cols_dict = {c.lower():h[1][c][:] for c in cols}
+        cols_dict = {c.lower(): h[1][c][:] for c in cols}
         h.close()
-        for i,t in enumerate(tids):
+        for i, t in enumerate(tids):
             m = metadata()
             for c in cols_dict:
-                setattr(m,c,cols_dict[c][i])
+                setattr(m, c, cols_dict[c][i])
             truth[t] = m
 
     return truth
+
 
 def read_data(fi, truth=None, z_lim=2.1, return_pmf=False, nspec=None):
     """Read data from input file.
@@ -140,7 +142,8 @@ def read_data(fi, truth=None, z_lim=2.1, return_pmf=False, nspec=None):
     z_lim : float, optional
         Redshift to use when applying a z-cut. Defaults to 2.1.
     return_pmf : bool, optional
-        Whether or not to return the `plate`, `mjd` and `fiberid`. Defaults to False.
+        Whether or not to return the `plate`, `mjd` and `fiberid`.
+        Defaults to False.
     nspec : int, optional
         Number of spectra to read. Defaults to None (all spectra)
 
@@ -158,8 +161,8 @@ def read_data(fi, truth=None, z_lim=2.1, return_pmf=False, nspec=None):
     z : numpy.ndarray
         Array of redshifts.
     bal : numpy.ndarray
-        Truth array indicating whether each QSO is a BAL QSO or not. Each element
-        is set to `1` if True or `0` if False.
+        Truth array indicating whether each QSO is a BAL QSO or not. Each
+        element is set to `1` if True or `0` if False.
     plate : numpy.ndarray
         Array of plate ids. Only returned when `return_pmf` is True.
     mjd : numpy.ndarray
@@ -181,18 +184,19 @@ def read_data(fi, truth=None, z_lim=2.1, return_pmf=False, nspec=None):
 
     for f in fi:
         print('INFO: reading data from {}'.format(f))
-        h=fitsio.FITS(f)
+        h = fitsio.FITS(f)
         if nspec is None:
             nspec = h[1].get_nrows()
         aux_tids = h[1]['TARGETID'][:nspec].astype(int)
-        ## remove thing_id == -1 or not in sdrq
+        # Remove thing_id == -1 or not in sdrq
         w = (aux_tids != -1)
         if truth is not None:
             w_in_truth = np.in1d(aux_tids, list(truth.keys()))
-            print("INFO: removing {} spectra missing in truth".format((~w_in_truth).sum()),flush=True)
+            print((f"INFO: Removing {(~w_in_truth).sum()}"
+                   " spectra missing in truth"), flush=True)
             w &= w_in_truth
         aux_tids = aux_tids[w]
-        aux_X = h[0][:nspec,:]
+        aux_X = h[0][:nspec, :]
 
         aux_X = aux_X[w]
         if return_pmf:
@@ -206,7 +210,7 @@ def read_data(fi, truth=None, z_lim=2.1, return_pmf=False, nspec=None):
         X.append(aux_X)
         tids.append(aux_tids)
 
-        print("INFO: found {} spectra in file {}".format(aux_tids.shape, f))
+        print(f"INFO: Found {aux_tids.shape} spectra in file {f}")
 
     tids = np.concatenate(tids)
     X = np.concatenate(X)
@@ -216,8 +220,8 @@ def read_data(fi, truth=None, z_lim=2.1, return_pmf=False, nspec=None):
         mjd = np.array(mjd)
         fid = np.array(fid)
 
-    we = X[:,443:]
-    w = we.sum(axis=1)==0
+    we = X[:, 443:]
+    w = we.sum(axis=1) == 0
     print("INFO: removing {} spectra with zero weights".format(w.sum()))
     X = X[~w]
     tids = tids[~w]
@@ -227,10 +231,10 @@ def read_data(fi, truth=None, z_lim=2.1, return_pmf=False, nspec=None):
         mjd = mjd[~w]
         fid = fid[~w]
 
-    mdata = np.average(X[:,:443], weights = X[:,443:], axis=1)
-    sdata = np.average((X[:,:443]-mdata[:,None])**2,
-            weights = X[:,443:], axis=1)
-    sdata=np.sqrt(sdata)
+    mdata = np.average(X[:, :443], weights=X[:, 443:], axis=1)
+    sdata = np.average((X[:, :443] - mdata[:, None])**2,
+                       weights=X[:, 443:], axis=1)
+    sdata = np.sqrt(sdata)
 
     w = sdata == 0
     print("INFO: removing {} spectra with zero flux".format(w.sum()))
@@ -244,17 +248,18 @@ def read_data(fi, truth=None, z_lim=2.1, return_pmf=False, nspec=None):
         mjd = mjd[~w]
         fid = fid[~w]
 
-    X = X[:,:443]-mdata[:,None]
-    X /= sdata[:,None]
+    X = X[:, :443] - mdata[:, None]
+    X /= sdata[:, None]
 
-    if truth==None:
+    if truth is None:
         if return_pmf:
-            return tids,X,plate,mjd,fid
+            return tids, X, plate, mjd, fid
         else:
-            return tids,X
+            return tids, X
 
-    ## remove zconf == 0 (not inspected)
-    observed = [(truth[t].class_person>0) or (truth[t].z_conf_person>0) for t in tids]
+    # Remove zconf == 0 (not inspected)
+    observed = [(truth[t].class_person > 0) or
+                (truth[t].z_conf_person > 0) for t in tids]
     observed = np.array(observed, dtype=bool)
     tids = tids[observed]
     X = X[observed]
@@ -264,61 +269,63 @@ def read_data(fi, truth=None, z_lim=2.1, return_pmf=False, nspec=None):
         mjd = mjd[observed]
         fid = fid[observed]
 
-    ## fill redshifts
+    # Fill redshifts
     z = np.zeros(X.shape[0])
     z[:] = [truth[t].z_vi for t in tids]
 
-    ## fill bal
+    # Fill bal
     bal = np.zeros(X.shape[0])
-    bal[:] = [(truth[t].bal_flag_vi*(truth[t].bi_civ>0))-\
-            (not truth[t].bal_flag_vi)*(truth[t].bi_civ==0) for t in tids]
+    bal[:] = [(truth[t].bal_flag_vi * (truth[t].bi_civ > 0)) -
+              (not truth[t].bal_flag_vi) * (truth[t].bi_civ == 0)
+              for t in tids]
 
-    ## fill classes
-    ## classes: 0 = STAR, 1=GALAXY, 2=QSO_LZ, 3=QSO_HZ, 4=BAD (zconf != 3)
+    # Fill classes
+    # Classes: 0 = STAR, 1=GALAXY, 2=QSO_LZ, 3=QSO_HZ, 4=BAD (zconf != 3)
     nclasses = 5
     sdrq_class = np.array([truth[t].class_person for t in tids])
     z_conf = np.array([truth[t].z_conf_person for t in tids])
 
-    Y = np.zeros((X.shape[0],nclasses))
-    ## STAR
-    w = (sdrq_class==1) & (z_conf==3)
-    Y[w,0] = 1
+    Y = np.zeros((X.shape[0], nclasses))
+    # STAR
+    w = (sdrq_class == 1) & (z_conf == 3)
+    Y[w, 0] = 1
 
-    ## GALAXY
-    w = (sdrq_class==4) & (z_conf==3)
-    Y[w,1] = 1
+    # GALAXY
+    w = (sdrq_class == 4) & (z_conf == 3)
+    Y[w, 1] = 1
 
-    ## QSO_LZ
-    w = ((sdrq_class==3) | (sdrq_class==30)) & (z<z_lim) & (z_conf==3)
-    Y[w,2] = 1
+    # QSO_LZ
+    w = ((sdrq_class == 3) | (sdrq_class == 30)) & (z < z_lim) & (z_conf == 3)
+    Y[w, 2] = 1
 
-    ## QSO_HZ
-    w = ((sdrq_class==3) | (sdrq_class==30)) & (z>=z_lim) & (z_conf==3)
-    Y[w,3] = 1
+    # QSO_HZ
+    w = ((sdrq_class == 3) | (sdrq_class == 30)) & (z >= z_lim) & (z_conf == 3)
+    Y[w, 3] = 1
 
-    ## BAD
+    # BAD
     w = z_conf != 3
-    Y[w,4] = 1
+    Y[w, 4] = 1
 
-    ## check that all spectra have exactly one classification
-    assert (Y.sum(axis=1).min()==1) and (Y.sum(axis=1).max()==1)
+    # Check that all spectra have exactly one classification
+    assert (Y.sum(axis=1).min() == 1) and (Y.sum(axis=1).max() == 1)
 
     if return_pmf:
-        return tids,X,Y,z,bal,plate,mjd,fid
+        return tids, X, Y, z, bal, plate, mjd, fid
 
-    return tids,X,Y,z,bal
+    return tids, X, Y, z, bal
 
 
-def load_desi_exposure(dir_name, spec_number, fibers=np.ones(500, dtype="bool")):
+def load_desi_exposure(dir_name, spec_number,
+                       fibers=np.ones(500, dtype="bool")):
     """Load and renormalize a raw DESI spectrographic exposure.
 
-    This method will load B, R and Z cframe files in sequence. First, spectra are
-    rebinned to the QuasarNet wavelength grid. Rebinned spectra are divided by
-    the rebinned IVAR to reweight the spectra. Next, rebinned spectra are
-    normalized by subtracting the weighted mean of the spectra and then dividing
-    the resultant spectra by its weighted rms. The rebinned IVAR is used for
-    weighting. Any spectra where the IVAR is 0 for the entire wavelength grid
-    is discarded.
+    This method will load B, R and Z cframe files in sequence. First, spectra
+    are rebinned to the QuasarNet wavelength grid. Rebinned spectra are divided
+    by the rebinned IVAR to reweight the spectra. Next, rebinned spectra are
+    normalized by subtracting the weighted mean of the spectra and then
+    dividing the resultant spectra by its weighted rms. The rebinned IVAR is
+    used for weighting. Any spectra where the IVAR is 0 for the entire
+    wavelength grid is discarded.
 
     Parameters
     ----------
@@ -327,25 +334,28 @@ def load_desi_exposure(dir_name, spec_number, fibers=np.ones(500, dtype="bool"))
     spec_number : int
         Spectrograph number to load.
     fibers : numpy.ndarray, optional.
-        Array of length 500 indicating whether each fiber should be loaded. True
-        if the fiber should be loaded, False otherwise. Defaults to True for all
-        500 fibers.
+        Array of length 500 indicating whether each fiber should be loaded.
+        True if the fiber should be loaded, False otherwise. Defaults to
+        True for all 500 fibers.
 
     Returns
     -------
     X_out : numpy.ndarray
         Renormalized and rebinned spectra. Output spectra will have shape
-        `(nspectra, nbins)` where `nbins=443` for the QuasarNet wavelength grid.
+        `(nspectra, nbins)` where `nbins=443` for the QuasarNet wavelength
+        grid.
     w : numpy.ndarray
-        Array of length `sum(fibers == True)` where each element is True if the spectra
-        was kept in `X_out` and False if the spectra was discarded.
+        Array of length `sum(fibers == True)` where each element is True if
+        the spectra was kept in `X_out` and False if the spectra was discarded.
 
     See Also
     ---------
     load_desi_daily : Load a daily exposure.
     """
-    assert len(fibers) == 500, "fibers input must include True/False for all 500 fibers."
-    assert 0 <= spec_number and spec_number <= 9, "spec_number must be between 0 and 9"
+    assert len(fibers) == 500, ("fibers input must include True/False"
+                                " for all 500 fibers.")
+    assert 0 <= spec_number and spec_number <= 9, ("spec_number must be"
+                                                   " between 0 and 9.")
 
     file_loc = Path(dir_name)
     exp_id = file_loc.parts[-1]
@@ -356,7 +366,8 @@ def load_desi_exposure(dir_name, spec_number, fibers=np.ones(500, dtype="bool"))
     X_out = np.zeros((nfibers, 443))
 
     # ivar_out is the weights out, i.e. the ivar, we use this for normalization
-    ivar_out = np.zeros_like(X_out) # Use zeros_like so we only have to change one
+    # Use zeros_like so we only have to change one
+    ivar_out = np.zeros_like(X_out)
 
     cams = ["B", "R", "Z"]
     for c in cams:
@@ -384,23 +395,25 @@ def load_desi_exposure(dir_name, spec_number, fibers=np.ones(500, dtype="bool"))
     # axis=1 corresponds to the rebinned spectral axis
     # Finding the weighted mean both for normalization and for the rms
     mean = np.average(X_out, axis=1, weights=ivar_out)[:, None]
-    rms = np.sqrt(np.average((X_out - mean) ** 2 ,axis=1, weights=ivar_out))[:, None]
+    rms = np.sqrt(np.average((X_out - mean) ** 2, axis=1, weights=ivar_out))
+    rms = rms[:, None]
 
     # Normalize by subtracting the weighted mean and dividing by the rms
     # as prescribed in the original QuasarNet paper.
     X_out = (X_out - mean) / rms
     return X_out, np.where(nonzero_weights)[0]
 
+
 def load_desi_coadd(filename, rows=None):
     """Load and renormalize a DESI coadded spectrographic exposure.
 
-    This method will load a coadd file and renormalize as follows. First, spectra are
-    rebinned to the QuasarNet wavelength grid. Rebinned spectra are divided by
-    the rebinned IVAR to reweight the spectra. Next, rebinned spectra are
-    normalized by subtracting the weighted mean of the spectra and then dividing
-    the resultant spectra by its weighted rms. The rebinned IVAR is used for
-    weighting. Any spectra where the IVAR is 0 for the entire wavelength grid
-    is discarded.
+    This method will load a coadd file and renormalize as follows. First,
+    spectra are rebinned to the QuasarNet wavelength grid. Rebinned spectra
+    are divided by the rebinned IVAR to reweight the spectra. Next, rebinned
+    spectra are normalized by subtracting the weighted mean of the spectra and
+    then dividing the resultant spectra by its weighted rms. The rebinned IVAR
+    is used for weighting. Any spectra where the IVAR is 0 for the entire
+    wavelength grid is discarded.
 
     Parameters
     ----------
@@ -417,8 +430,8 @@ def load_desi_coadd(filename, rows=None):
         Renormalized and rebinned spectra. Output spectra will have shape
         `(nspectra, nbins)` where `nbins=443` for the QuasarNet wavelength grid.
     w : numpy.ndarray
-        Array of length `sum(rows == True)` where each element is True if the spectra
-        was kept in `X_out` and False if the spectra was discarded.
+        Array of length `sum(rows == True)` where each element is True if
+        the spectra was kept in `X_out` and False if the spectra was discarded.
 
     See Also
     --------
@@ -427,17 +440,21 @@ def load_desi_coadd(filename, rows=None):
     cams = ["B", "R", "Z"]
     with fitsio.FITS(filename) as h:
         # Load each cam sequentially, then rebin and merge
-        # We will be rebinning down to 443, which is the input size of QuasarNet
+        # We will be rebinning down to 443, the input size of QuasarNet
         if rows is None:
             nfibers = len(h['B_FLUX'].read())
             rows = np.ones(nfibers, dtype='bool')
         else:
             nfibers = np.sum(rows > 0)
         X_out = np.zeros((nfibers, 443))
-        # ivar_out is the weights out, i.e. the ivar, we use this for normalization
-        ivar_out = np.zeros_like(X_out) # Use zeros_like so we only have to change one
+        # ivar_out is the weights out, we use this for normalization
+        # Use zeros_like so we only have to change one
+        ivar_out = np.zeros_like(X_out)
         for c in cams:
-            fluxname,ivarname,wname = f"{c}_FLUX", f"{c}_IVAR", f"{c}_WAVELENGTH"
+            fluxname = f"{c}_FLUX"
+            ivarname = f"{c}_IVAR"
+            wname = f"{c}_WAVELENGTH"
+
             # Load the flux and ivar
             flux = h[fluxname].read()[rows, :]
             ivar = h[ivarname].read()[rows, :]
@@ -453,14 +470,16 @@ def load_desi_coadd(filename, rows=None):
     X_out[non_zero] /= ivar_out[non_zero]
 
     nonzero_weights = np.sum(ivar_out, axis=1) != 0
-    #print(f"{nfibers - np.sum(nonzero_weights)} spectra with zero weights")
+
+    # f"{nfibers - np.sum(nonzero_weights)} spectra with zero weights"
     X_out = X_out[nonzero_weights]
     ivar_out = ivar_out[nonzero_weights]
 
     # axis=1 corresponds to the rebinned spectral axis
     # Finding the weighted mean both for normalization and for the rms
     mean = np.average(X_out, axis=1, weights=ivar_out)[:, None]
-    rms = np.sqrt(np.average((X_out - mean) ** 2 ,axis=1, weights=ivar_out))[:, None]
+    rms = np.sqrt(np.average((X_out - mean) ** 2, axis=1, weights=ivar_out))
+    rms = rms[:, None]
 
     # Normalize by subtracting the weighted mean and dividing by the rms
     # as prescribed in the original QuasarNet paper.
@@ -468,16 +487,17 @@ def load_desi_coadd(filename, rows=None):
     return X_out, np.where(nonzero_weights)[0]
 
 
-def load_desi_daily(night, exp_id, spec_number, fibers=np.ones(500, dtype="bool")):
+def load_desi_daily(night, exp_id, spec_number,
+                    fibers=np.ones(500, dtype="bool")):
     """Load and renormalize a daily DESI spectrographic exposure.
 
-    This method will load B, R and Z cframe files in sequence. First, spectra are
-    rebinned to the QuasarNet wavelength grid. Rebinned spectra are divided by
-    the rebinned IVAR to reweight the spectra. Next, rebinned spectra are
-    normalized by subtracting the weighted mean of the spectra and then dividing
-    the resultant spectra by its weighted rms. The rebinned IVAR is used for
-    weighting. Any spectra where the IVAR is 0 for the entire wavelength grid
-    is discarded.
+    This method will load B, R and Z cframe files in sequence. First, spectra
+    are rebinned to the QuasarNet wavelength grid. Rebinned spectra are
+    divided by the rebinned IVAR to reweight the spectra. Next, rebinned
+    spectra are normalized by subtracting the weighted mean of the spectra and
+    then dividing the resultant spectra by its weighted rms. The rebinned IVAR
+    is used for weighting. Any spectra where the IVAR is 0 for the entire
+    wavelength grid is discarded.
 
     Parameters
     ----------
@@ -488,26 +508,29 @@ def load_desi_daily(night, exp_id, spec_number, fibers=np.ones(500, dtype="bool"
     spec_number : int
         Spectrograph number to load.
     fibers : numpy.ndarray, optional.
-        Array of length 500 indicating whether each fiber should be loaded. True
-        if the fiber should be loaded, False otherwise. Defaults to True for all
-        500 fibers.
+        Array of length 500 indicating whether each fiber should be loaded.
+        True if the fiber should be loaded, False otherwise.
+        Defaults to True for all 500 fibers.
 
     Returns
     -------
     X_out : numpy.ndarray
         Renormalized and rebinned spectra. Output spectra will have shape
-        `(nspectra, nbins)` where `nbins=443` for the QuasarNet wavelength grid.
+        `(nspectra, nbins)` where `nbins=443` for the QuasarNet wavelength
+        grid.
     w : numpy.ndarray
-        Array of length `sum(fibers == True)` where each element is True if the spectra
-        was kept in `X_out` and False if the spectra was discarded.
+        Array of length `sum(fibers == True)` where each element is True if
+        the spectra was kept in `X_out` and False if the spectra was discarded.
 
     See Also
     --------
     load_desi_exposure : Used by load_desi_daily to load the given exposure.
     load_desi_coadd : Load a coadded exposure.
     """
-    assert len(fibers) == 500, "fibers input must include True/False for all 500 fibers."
-    assert 0 <= spec_number and spec_number <= 9, "spec_number must be between 0 and 9"
+    assert len(fibers) == 500, ("fibers input must include True/False"
+                                " for all 500 fibers.")
+    assert 0 <= spec_number and spec_number <= 9, ("spec_number must be"
+                                                   " between 0 and 9.")
 
     # For now load daily cframes files
     # TODO: add support for loading arbitrary cframes.
