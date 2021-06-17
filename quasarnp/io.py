@@ -428,9 +428,9 @@ def load_desi_coadd(filename, rows=None):
     with fitsio.FITS(filename) as h:
         # Load each cam sequentially, then rebin and merge
         # We will be rebinning down to 443, which is the input size of QuasarNet
-        if rows == None:
+        if rows is None:
             nfibers = len(h['B_FLUX'].read())
-            rows = np.ones(nfibers,dtype='bool')
+            rows = np.ones(nfibers, dtype='bool')
         else:
             nfibers = np.sum(rows > 0)
         X_out = np.zeros((nfibers, 443))
