@@ -15,15 +15,17 @@ relu = lambda x: np.maximum(0, x)
 linear = lambda x: x
 sigmoid = lambda x: 1 / (1 + np.exp(-x))
 
+
 # Required layers
 # Make sure that TF does x@w and not w@x
 # ^ Confirmed via weights saved in hdf5 file
 def dense(x, w, b, phi):
     """Computes a dense layer operation on the input data.
 
-    This function implements a single dense layer for a neural network. The input
-    data is dotted with the weights vector. The bias is added to the output.
-    Finally, the activation function is run over the data and the result is returned.
+    This function implements a single dense layer for a neural network. The
+    input data is dotted with the weights vector. The bias is added to the
+    output. Finally, the activation function is run over the data and the
+    result is returned.
 
     Parameters
     ----------
@@ -42,6 +44,7 @@ def dense(x, w, b, phi):
         Output of the dense layer.
     """
     return phi(x @ w + b)
+
 
 # This uses the "moving mean" which is compiled from the training set
 # rather than just taking the mean of the input data like I would assume.
@@ -89,6 +92,7 @@ def batch_normalization(x, mean, var, beta, gamma, epsilon):
     https://www.tensorflow.org/api_docs/python/tf/nn/batch_normalization.
     """
     return ((x - mean) / np.sqrt(var + epsilon)) * gamma + beta
+
 
 # This assumes x and w are in the exact form you would pass
 # them to tf.nn.conv1d for example
@@ -161,7 +165,8 @@ def conv1d(x, w, stride=1, b=None):
     if b is None:
         b = np.zeros(nfilters)
 
-    return result + b # Adding bias
+    return result + b  # Adding bias
+
 
 # Flattening layer, need to only flatten along dimensions
 # that are not the batch size dimension.
