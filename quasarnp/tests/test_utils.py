@@ -6,6 +6,8 @@ import numpy as np
 
 from quasarnp.utils import regrid, process_preds
 
+file_loc = pathlib.Path(__file__).parent.resolve() / "test_files"
+
 
 class TestUtilities(unittest.TestCase):
     # Test taking the old grid and generating which bins on the new grid
@@ -27,7 +29,7 @@ class TestUtilities(unittest.TestCase):
         # In order to not have to overload this file with nuisance, I have moved
         # the actual answer here to regrid.txt. It's quite long, so only
         # investigate if strictly necessary.
-        loc = pathlib.Path(__file__).parent.resolve() / "regrid.txt"
+        loc = file_loc / "regrid.txt"
         with open(loc, 'r') as f:
             expected_bins = ast.literal_eval(f.read().replace("\n", ""))
         self.assertTrue(np.allclose(ob_bins, expected_bins))
@@ -44,21 +46,20 @@ class TestUtilities(unittest.TestCase):
 
         # These predictions come from the qn_train_coadd_indtrain_0_0_boss10.h5
         # weights file trained by James Farr.
-        base_loc = pathlib.Path(__file__).parent.resolve()
-        loc = base_loc / "predict_data.npy"
+        loc = file_loc / "predict_data.npy"
         with open(loc, 'rb') as f:
             p = np.load(f)
 
         observed = process_preds(p, lines, lines_bal, verbose=False)
 
         # We'll just check the LyA predictions and the BAL predictions.
-        loc = base_loc / "predict_lya.npy"
+        loc = file_loc / "predict_lya.npy"
         with open(loc, 'rb') as f:
             expected_lya = np.load(f)
         self.assertTrue(np.allclose(observed[0], expected_lya))
 
         # Gonna assume that with these two everything's alright.
-        loc = base_loc / "predict_bal.npy"
+        loc = file_loc / "predict_bal.npy"
         with open(loc, 'rb') as f:
             expected_bal = np.load(f)
         # One of these predictions is slightly different, by a very small amount
