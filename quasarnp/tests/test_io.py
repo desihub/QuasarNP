@@ -5,12 +5,14 @@ import numpy as np
 
 import quasarnp.io
 
+file_loc = pathlib.Path(__file__).parent.resolve() / "test_files"
+
 
 class TestLoadingModel(unittest.TestCase):
     def test_load_file(self):
         # Get the location of this test script and load the test_weights file
         # in this lower level directory.
-        loc = pathlib.Path(__file__).parent.resolve() / "test_weights.h5"
+        loc = file_loc / "test_weights.h5"
 
         # If it fails here we have a problem lol.
         weights_dict = quasarnp.io.load_file(loc)
@@ -52,6 +54,26 @@ class TestLoadingModel(unittest.TestCase):
                     -0.317558, -0.09346453, -0.21203938, -0.238487, -0.19067243]
         observed = weights_dict["fc_box_2"]["bias"]
         self.assertTrue(np.allclose(observed, expected))
+
+
+class TestLoadingData(unittest.TestCase):
+    def test_load_desi_coadd(self):
+        # This test coadd was constructed by keeping the first 25 fibers from
+        # everest/tiles/cumulative/80605/20210205/coadd-0-80605-thru20210205.fits
+        loc = file_loc / "test_coadd.fits"
+
+        observed_x, observed_w = quasarnp.io.load_desi_coadd(loc)
+
+        # This is the expected "keep" values, i.e. which spectra we're keeping
+        expected_w = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17,
+                      18, 19, 20, 21, 22, 23, 24]
+        self.assertTrue(np.allclose(observed_w, expected_w))
+
+        # This is the expected renormalized spectra
+        expected_loc = file_loc / "coadd_x.npy"
+        expected_x = np.load(expected_loc)
+
+        self.assertTrue(np.allclose(observed_x, expected_x))
 
 
 if __name__ == '__main__':
