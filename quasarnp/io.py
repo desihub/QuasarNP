@@ -315,6 +315,9 @@ def read_data(fi, truth=None, z_lim=2.1, return_pmf=False, nspec=None):
     return tids, X, Y, z, bal
 
 
+# DESI Related IO below this point
+###############################################################################
+
 def load_desi_exposure(dir_name, spec_number,
                        fibers=np.ones(500, dtype="bool")):
     """Load and renormalize a raw DESI spectrographic exposure.
@@ -539,3 +542,36 @@ def load_desi_daily(night, exp_id, spec_number,
     file_loc = Path(root, night, exp_id)
 
     return load_desi_exposure(file_loc, spec_number, fibers)
+
+
+# BOSS Related IO below this point
+###############################################################################
+
+def read_spall(file_loc):
+    """ Read metadata from a spAll file.
+
+    Parameters
+    ----------
+        file_loc : string or Path
+            Full path and filename of the spAll file to read.
+    Returns
+    -------
+        tid : numpy.ndarray
+            Array of integer THING_IDs.
+        pmf2tid : dict
+            Dictionary mapping (PLATE, MJD, FIBERID) to THING_ID.
+
+    """
+    # Open the file, and read plate, mjd, fiberid, thing_id, specprimary.
+    # read() is faster than using [:] since we can read all the columns at once.
+    with fitsio.FITS(file_loc) as h:
+        d = h[1].read(columns=["PLATE", "MJD", "FIBERID", "THING_ID",
+                               "SPECPRIMARY"])
+
+    # Need to cast THING_ID to int and it's easier to read to do it here.
+    tid = d["THING_ID"].astype(int)
+    pmf2tid = {(p, m, f): t for p, m, f, t, s in zip(d["PLATE"], d["MJD"],
+                                                     d["FIBERID"], tid,
+                                                     d["SPECPRIMARY"])}
+
+    return tid, pmf2tid
