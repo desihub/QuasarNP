@@ -59,6 +59,7 @@ dl = 1e-3
 nbins = int((l_max - l_min) / dl)
 wave = 10**(l_min + np.arange(nbins) * dl)
 
+
 def process_preds(preds, lines, lines_bal, verbose=True):
     """Convert network output to line confidence and redshift predictions.
 
@@ -140,6 +141,7 @@ def process_preds(preds, lines, lines_bal, verbose=True):
 
     return c_line, z_line, zbest, c_line_bal, z_line_bal
 
+
 def regrid(old_grid):
     """Generate the mapping from the old wavelength grid to the QuasarNet grid.
 
@@ -159,7 +161,7 @@ def regrid(old_grid):
         it is not.
     """
     bins = np.floor((np.log10(old_grid) - l_min) / dl).astype(int)
-    w = (bins>=0) & (bins<nbins)
+    w = (bins >= 0) & (bins < nbins)
 
     return bins, w
 
@@ -209,3 +211,35 @@ def rebin(flux, ivar, w_grid):
         ivar_out[i, :len(c)] += c
 
     return flux_out, ivar_out
+
+
+def renormalize(flux, ivar):
+    """Renormalize the flux for processing with QuasarNet.
+
+    The process for renormalizing flux is as follows. First, the weighted mean
+    of the flux is calculated, with the ivar as weights. Then the weighted root
+    mean squared value of the flux minus the mean is computed, once again using
+    the ivar as weights. The renormalized flux is the initial flux minus the
+    weighted mean and then divided by the rms value.
+
+    Parameters
+    ----------
+    flux : numpy.ndarray
+        Input flux array of shape `(nspec, len(w_grid))`.
+    ivar : numpy.ndarray
+        Input ivar array of shape `(nspec, len(w_grid))`.
+
+    Returns
+    -------
+    flux_out : numpy.ndarray
+        Input flux renormalized for use with QuasarNet.
+    """
+
+    # axis=1 corresponds to the rebinned spectral axis
+    # Finding the weighted mean both for normalization and for the rms
+    mean = np.average(flux, axis=1, weights=ivar)[:, None]
+    rms = np.sqrt(np.average((flux - mean) ** 2, axis=1, weights=ivar))[:, None]
+
+    # Normalize by subtracting the weighted mean and dividing by the rms
+    # as prescribed in the original QuasarNet paper.
+    return (flux - mean) / rms

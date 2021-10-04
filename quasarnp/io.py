@@ -14,7 +14,7 @@ import h5py
 import numpy as np
 
 from .model import QuasarNP
-from .utils import rebin
+from .utils import rebin, renormalize
 
 
 def load_file(filename):
@@ -395,15 +395,7 @@ def load_desi_exposure(dir_name, spec_number,
     X_out = X_out[nonzero_weights]
     ivar_out = ivar_out[nonzero_weights]
 
-    # axis=1 corresponds to the rebinned spectral axis
-    # Finding the weighted mean both for normalization and for the rms
-    mean = np.average(X_out, axis=1, weights=ivar_out)[:, None]
-    rms = np.sqrt(np.average((X_out - mean) ** 2, axis=1, weights=ivar_out))
-    rms = rms[:, None]
-
-    # Normalize by subtracting the weighted mean and dividing by the rms
-    # as prescribed in the original QuasarNet paper.
-    X_out = (X_out - mean) / rms
+    X_out = renormalize(X_out, ivar_out)
     return X_out, np.where(nonzero_weights)[0]
 
 
@@ -478,15 +470,7 @@ def load_desi_coadd(filename, rows=None):
     X_out = X_out[nonzero_weights]
     ivar_out = ivar_out[nonzero_weights]
 
-    # axis=1 corresponds to the rebinned spectral axis
-    # Finding the weighted mean both for normalization and for the rms
-    mean = np.average(X_out, axis=1, weights=ivar_out)[:, None]
-    rms = np.sqrt(np.average((X_out - mean) ** 2, axis=1, weights=ivar_out))
-    rms = rms[:, None]
-
-    # Normalize by subtracting the weighted mean and dividing by the rms
-    # as prescribed in the original QuasarNet paper.
-    X_out = (X_out - mean) / rms
+    X_out = renormalize(X_out, ivar_out)
     return X_out, np.where(nonzero_weights)[0]
 
 
