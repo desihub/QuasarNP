@@ -204,10 +204,19 @@ def rebin(flux, ivar, w_grid):
     flux_out = np.zeros((len(flux), nbins))
     ivar_out = np.zeros_like(flux_out)
 
+    # These lines are necessary for SDSS spectra. For DESI
+    # spectra nothing will change here, since the entire DESI grid is contained
+    # within the QuasarNET one, but for BOSS/eBOSS the grid can extend out
+    # past the QuasarNET grid and give negative bin values. I have tests that
+    # confirm this still works on DESI data, don't worry.
+    fl_iv = fl_iv[:, w]
+    new_grid = new_grid[w]
+    ivar_temp = ivar[:, w]
+
     for i in range(len(flux)):
-        c = np.bincount(new_grid, weights = fl_iv[i, :])
+        c = np.bincount(new_grid, weights=fl_iv[i, :])
         flux_out[i, :len(c)] += c
-        c = np.bincount(new_grid, weights = ivar[i, :])
+        c = np.bincount(new_grid, weights=ivar_temp[i, :])
         ivar_out[i, :len(c)] += c
 
     return flux_out, ivar_out
