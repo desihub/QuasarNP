@@ -4,7 +4,9 @@ import unittest
 
 import numpy as np
 
-from quasarnp.utils import regrid, process_preds
+import fitsio
+
+from quasarnp.utils import regrid, process_preds, rebin
 
 file_loc = pathlib.Path(__file__).parent.resolve() / "test_files"
 
@@ -34,6 +36,36 @@ class TestUtilities(unittest.TestCase):
             expected_bins = ast.literal_eval(f.read().replace("\n", ""))
         self.assertTrue(np.allclose(ob_bins, expected_bins))
         self.assertTrue(np.allclose(ob_keep, np.ones_like(ob_keep, dtype=bool)))
+
+    # Test rebinning some DESI data. Need this in case rebinning fails on
+    # SDSS/BOSS etc spectra for some reason. Don't call me prescient when it
+    # does and I need to change it.
+    def test_rebin(self):
+        # We will use the test coadd for this test.
+        loc = file_loc / "test_coadd.fits"
+        expected_loc = file_loc / "coadd_rebinned.fits"
+
+        cams = ["B", "R", "Z"]
+        # Load the coadd, and the known correct rebinning.
+        with fitsio.FITS(loc) as h:
+            with fitsio.FITS(expected_loc) as h2:
+                for c in cams:
+                    fluxname = f"{c}_FLUX"
+                    ivarname = f"{c}_IVAR"
+                    wname = f"{c}_WAVELENGTH"
+
+                    # Load the flux and ivar
+                    flux = h[fluxname].read()[:]
+                    ivar = h[ivarname].read()[:]
+                    w_grid = h[wname].read()
+
+                    # Rebin the flux and ivar
+                    n_flux, n_ivar = rebin(flux, ivar, w_grid)
+
+                    # Just checks that the rebinned is equal to the known
+                    # "correct" rebinning
+                    self.assertTrue(np.allclose(n_flux, h2[fluxname].read()[:]))
+                    self.assertTrue(np.allclose(n_ivar, h2[ivarname].read()[:]))
 
     # This test should be independent of weights file, so I precomputed the
     # processed predictions using a method I know/assume to be correct (the
