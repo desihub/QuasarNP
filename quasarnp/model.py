@@ -21,14 +21,13 @@ class QuasarNP():
     rescale : bool, optional
         Whether or not to rescale the output of the box layers. Defaults to False.
     """
-    def __init__(self, weights, nlines=7, rescale=False):
+    def __init__(self, weights, nlines=7, rescale=False, nlayers=4):
         # Store the weights to access later.
         self.weights = weights
         self.nlines = nlines
         self.apply_rescale = rescale
 
         self.convs = []
-        nlayers = 4
         for i in range(nlayers):
             n_conv = f"conv_{i + 1}"
             self.convs.append(n_conv)
@@ -46,6 +45,7 @@ class QuasarNP():
 
     def conv_layer(self, x, name):
         w_conv = self.weights[name]
+        # Gets the number name of this conv layer for the batch norm
         n_batch = f"batch_normalization_{name[-1]}"
         w_batch = self.weights[n_batch]
 

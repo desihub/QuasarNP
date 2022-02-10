@@ -81,10 +81,13 @@ def load_model(filename):
         Callable QuasarNP model with the weights provided by `filename`.
     """
     db = load_file(filename)
+
+    nlayers = len([k for k in db.keys() if k.startswith("conv")])
+
     if "lambda" in db:
-        return QuasarNP(db, rescale=True)
+        return QuasarNP(db, rescale=True, nlayers=nlayers)
     else:
-        return QuasarNP(db)
+        return QuasarNP(db, nlayers=nlayers)
 
 
 def read_truth(fi):
