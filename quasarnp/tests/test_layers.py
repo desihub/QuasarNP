@@ -309,6 +309,63 @@ class TestLayers(unittest.TestCase):
         self.assertEqual(observed.shape, expected.shape)
         self.assertTrue(np.allclose(observed, expected))
 
+    def test_conv1d_padding(self):
+        # Shape (batch_size, in_width, in_channels)
+        x = np.ones((5, 200, 5))
+
+        # Shape (filter_width, in_channels, out_channels)
+        w = np.ones((5, 5, 5))
+
+        # We expect that with the 25 filters that the convolution will give 25
+        # i.e. the sum of 25 ones
+        observed = conv1d(x, w, padding="valid")
+        expected = np.ones((5, 196, 5)) * 25
+        self.assertEqual(observed.shape, expected.shape)
+        self.assertTrue(np.allclose(observed, expected))
+
+        # This should get padded with zeros so that the input and output
+        # shapes are the same.
+        observed = conv1d(x, w, padding="same")
+        # Pads with a 15, then a 20 on either side.
+        expected = np.pad(expected, ((0, 0), (2, 2), (0, 0)), 'linear_ramp', end_values=(15, 15))
+        self.assertEqual(observed.shape, expected.shape)
+        self.assertTrue(np.allclose(observed, expected))
+
+        # Same tests as above, but with a stride of 2.
+        observed = conv1d(x, w, stride=2, padding="valid")
+        expected = np.ones((5, 98, 5)) * 25
+        self.assertEqual(observed.shape, expected.shape)
+        self.assertTrue(np.allclose(observed, expected))
+
+        # Same tests as above, but with a stride of 2.
+        observed = conv1d(x, w, stride=2, padding="same")
+        # You may be shocked to learn that *mathematically* this is not symmetric
+        # and that that is *correct*. You can prove it for yourself if you like.
+        expected = np.pad(expected, ((0, 0), (1, 1), (0, 0)), 'constant', constant_values=(15, 20))
+        self.assertEqual(observed.shape, expected.shape)
+        self.assertTrue(np.allclose(observed, expected))
+
+
+        # Doubling the input to make extra sure it's good
+        # x = x * 2
+        # observed = conv1d(x, w)
+        # expected = np.ones((5, 196, 5)) * 50
+        # self.assertEqual(observed.shape, expected.shape)
+        # self.assertTrue(np.allclose(observed, expected))
+
+        # # Testing a more dynamic x array.
+        # x = np.asarray([[1, 2, 3, 4, 5],
+        #                 [1, 2, 3, 4, 5],
+        #                 [1, 2, 3, 4, 5]]).reshape(3, -1, 1)
+        # w = np.ones((3, 1, 2))
+        # observed = conv1d(x, w)
+        # expected = [[[6, 6], [9, 9], [12, 12]],
+        #             [[6, 6], [9, 9], [12, 12]],
+        #             [[6, 6], [9, 9], [12, 12]]]
+        # expected = np.asarray(expected)
+        # self.assertEqual(observed.shape, expected.shape)
+        # self.assertTrue(np.allclose(observed, expected))
+
 
 if __name__ == '__main__':
     unittest.main()

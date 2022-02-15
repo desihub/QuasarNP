@@ -5,6 +5,7 @@ and flatten), this module defines three activation functions necessary to
 replicate the behaviour of QuasarNet. These three activation functions are the
 relu, linear and sigmoid activation functions.
 """
+from copy import copy
 import numpy as np
 
 # Useful
@@ -98,7 +99,7 @@ def batch_normalization(x, mean, var, beta, gamma, epsilon):
 # them to tf.nn.conv1d for example
 # This has same behavior as:
 # https://www.tensorflow.org/api_docs/python/tf/nn/conv1d
-def conv1d(x, w, stride=1, b=None):
+def conv1d(x, w, stride=1, b=None, padding="valid"):
     """Computes a 1-d convolution given 3-d input and weight arrays.
 
     Parameters
@@ -112,6 +113,11 @@ def conv1d(x, w, stride=1, b=None):
         Defaults to 1.
     b : numpy.ndarray, optional
         Bias array to be added to the output data. Defaults to None.
+    padding : string, optional
+        What padding strategy to use for this conv layer. Defaults to "valid",
+        which means no padding is done. An alternative option is "same", which
+        pads the layer such that the output has the same width as the input when
+        stride = 1.
 
     Returns
     -------
@@ -129,9 +135,15 @@ def conv1d(x, w, stride=1, b=None):
 
     # Getting some layer variables for use so we don't have to keep getting them
     n_in = x.shape[1]
+    x_in = np.copy(x) # We are going to potentially pad this, so should copy it
     nfilters = w.shape[-1]
     k = w.shape[0]
-    n_out = int((n_in - k) / stride + 1)
+
+    if padding == "same":
+        x_in = np.pad(x_in, ((0, 0), (k//2, k//2), (0, 0)), "constant")
+        n_out = int(n_in / stride)
+    else:
+        n_out = int((n_in - k) / stride + 1)
 
     i = 0
     j = 0
@@ -140,12 +152,12 @@ def conv1d(x, w, stride=1, b=None):
     result = np.zeros((x.shape[0], n_out, nfilters))
     # Loop over strides keeping track of j as the index in the
     # result array.
-    while i < (n_in - k + 1):
+    while i < (n_out * stride):
         # Collapse the last two dimensions, that is collapse
         # (batch size, kernel size, input dimension)
         # to
         # (batch size, kernel size * input dimension)
-        x1 = np.reshape(x[:, i:i+k, :], (x.shape[0], -1))
+        x1 = np.reshape(x_in[:, i:i+k, :], (x_in.shape[0], -1))
         # Collapse the weights array from
         # (kernel size, input dimension, output dimension)
         # to
