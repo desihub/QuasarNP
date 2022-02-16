@@ -6,6 +6,7 @@ replicate the behaviour of QuasarNet. These three activation functions are the
 relu, linear and sigmoid activation functions.
 """
 from copy import copy
+from math import ceil
 import numpy as np
 
 # Useful
@@ -140,8 +141,11 @@ def conv1d(x, w, stride=1, b=None, padding="valid"):
     k = w.shape[0]
 
     if padding == "same":
-        x_in = np.pad(x_in, ((0, 0), (k//2, k//2), (0, 0)), "constant")
-        n_out = int(n_in / stride)
+        pad = max(k - 1, 0)
+        l_p = pad // 2
+        r_p = pad - l_p
+        x_in = np.pad(x_in, ((0, 0), (l_p, r_p), (0, 0)), "constant")
+        n_out = ceil(n_in / stride)
     else:
         n_out = int((n_in - k) / stride + 1)
 
@@ -152,7 +156,7 @@ def conv1d(x, w, stride=1, b=None, padding="valid"):
     result = np.zeros((x.shape[0], n_out, nfilters))
     # Loop over strides keeping track of j as the index in the
     # result array.
-    while i < (n_out * stride):
+    while i < (x_in.shape[1] - k + 1):
         # Collapse the last two dimensions, that is collapse
         # (batch size, kernel size, input dimension)
         # to
