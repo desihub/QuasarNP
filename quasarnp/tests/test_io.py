@@ -15,7 +15,7 @@ class TestLoadingModel(unittest.TestCase):
         loc = file_loc / "test_weights.h5"
 
         # If it fails here we have a problem lol.
-        weights_dict = quasarnp.io.load_file(loc)
+        weights_dict, config_dict = quasarnp.io.load_file(loc)
 
         # Check that we got all the keys we need.
         expected_keys = ['batch_normalization_1', 'batch_normalization_2',
@@ -29,6 +29,9 @@ class TestLoadingModel(unittest.TestCase):
         # Convert to set since the dict is unordered and keys may not be in the
         # same order as the expected. Sets are unordered.
         self.assertEqual(set(weights_dict.keys()), set(expected_keys))
+
+        expected_keys = ['conv_1', 'conv_2', 'conv_3', 'conv_4']
+        self.assertEqual(set(config_dict.keys()), set(expected_keys))
 
         # We're not going to test every single field, it's too long and messy.
         expected = [0.22520675, 0.134974, 0.25075355, 0.16675548, 0.4055901,
@@ -55,6 +58,10 @@ class TestLoadingModel(unittest.TestCase):
         observed = weights_dict["fc_box_2"]["bias"]
         self.assertTrue(np.allclose(observed, expected))
 
+        # Testing that we got the right padding here.
+        expected = "valid"
+        observed = config_dict["conv_1"]["padding"]
+        self.assertEqual(observed, expected)
 
 class TestLoadingData(unittest.TestCase):
     def test_load_desi_coadd(self):

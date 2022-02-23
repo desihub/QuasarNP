@@ -6,7 +6,7 @@ A method is also provided to load a DESI coadd file. Two legacy methods are
 provided to interop with SDSS data: one to load a truth table and one to
 load a SDSS data file.
 """
-
+import json
 from pathlib import Path
 
 import fitsio
@@ -33,6 +33,7 @@ def load_file(filename):
 
     with h5py.File(filename, "r") as f:
         m_weights = f['model_weights']
+        m_config = json.loads(f.attrs["model_config"])
 
         # Some versions of TF/Keras are 1 indexed and so bn layers start
         # at batch_normalization_1. Some versions are 0 indexed and start at
@@ -65,7 +66,18 @@ def load_file(filename):
 
             result[name] = data_dict
 
-    return result
+    names = [m_config["config"]["layers"][i]["config"]["name"] for i in range(len(m_config["config"]["layers"]))]
+    conv_layers = [k for k in result.keys() if k.startswith("conv")]
+
+    config_dict = {}
+    for l in conv_layers:
+        idx = names.index(l)
+        temp = {}
+        for k in ["padding", "strides"]:
+            temp[k] = m_config["config"]["layers"][idx]["config"][k]
+        config_dict[l] = temp
+
+    return result, config_dict
 
 
 def load_model(filename):
@@ -80,14 +92,14 @@ def load_model(filename):
     QuasarNP
         Callable QuasarNP model with the weights provided by `filename`.
     """
-    db = load_file(filename)
+    db, config = load_file(filename)
 
     nlayers = len([k for k in db.keys() if k.startswith("conv")])
 
     if "lambda" in db:
-        return QuasarNP(db, rescale=True, nlayers=nlayers)
+        return QuasarNP(db, rescale=True, nlayers=nlayers, config_dict=config)
     else:
-        return QuasarNP(db, nlayers=nlayers)
+        return QuasarNP(db, nlayers=nlayers, config_dict=config)
 
 
 def read_truth(fi):

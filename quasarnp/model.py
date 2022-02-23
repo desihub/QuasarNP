@@ -21,9 +21,10 @@ class QuasarNP():
     rescale : bool, optional
         Whether or not to rescale the output of the box layers. Defaults to False.
     """
-    def __init__(self, weights, nlines=7, rescale=False, nlayers=4):
+    def __init__(self, weights, nlines=7, rescale=False, nlayers=4, config_dict=None):
         # Store the weights to access later.
         self.weights = weights
+        self.config = config_dict
         self.nlines = nlines
         self.apply_rescale = rescale
 
@@ -49,7 +50,14 @@ class QuasarNP():
         n_batch = f"batch_normalization_{name[-1]}"
         w_batch = self.weights[n_batch]
 
-        y = conv1d(x, w_conv["kernel"], stride=2, b=w_conv["bias"])
+        if self.config is not None:
+            stride = self.config[name]["strides"][0]
+            padding = self.config[name]["padding"]
+
+            y = conv1d(x, w_conv["kernel"], stride=stride, b=w_conv["bias"],
+                       padding=padding)
+        else:
+            y = conv1d(x, w_conv["kernel"], stride=2, b=w_conv["bias"])
         # Default epsilon in Tensorflow is 0.001
         # QuasarNet does not seem to change this value so I will use this for now.
         y = batch_normalization(y, w_batch["moving_mean"], w_batch["moving_variance"] ,
