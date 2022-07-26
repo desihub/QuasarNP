@@ -36,7 +36,7 @@ class QuasarNP():
         # Don't forget to flatten here before dense layer
         self.dense = lambda x: dense(x, weights["fc_common"]["kernel"], weights["fc_common"]["bias"], linear)
 
-        w_batch = self.weights["batch_normalization_5"]
+        w_batch = self.weights[f"batch_normalization_{nlayers + 1}"]
         self.batch_norm = lambda x: batch_normalization(x, w_batch["moving_mean"], w_batch["moving_variance"] ,
                                                              w_batch["beta"], w_batch["gamma"], 0.001)
         # Do not forget that there is a relu here after the batch_norm
