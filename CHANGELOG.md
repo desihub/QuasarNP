@@ -8,8 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.5] - Unreleased
 ### Added
+- [#1a063232] Added unit test to catch the bug fixed in [#a7621bb1]
 
 ### Changed
+- [#a7621bb1] Fixed a bug where models with $n\neq4$ layers would use the wrong
+batch normalization weights in the fully connected layer.
 
 
 ## [0.1.4] - 2022-07-20
