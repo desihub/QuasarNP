@@ -13,9 +13,20 @@ import numpy as np
 # https://www.tensorflow.org/guide/tensor
 
 # Activations
-relu = lambda x: np.maximum(0, x)
-linear = lambda x: x
-sigmoid = lambda x: 1 / (1 + np.exp(-x))
+def relu(x):
+    """Computes a rectified-linear activation function on the input vector.
+    """
+    return np.maximum(0, x)
+
+def linear(x):
+    """Computes a linear activation function on the input vector.
+    """
+    return x
+
+def sigmoid(x):
+    """Computes a sigmoid activation function on the input vector.
+    """
+    return 1 / (1 + np.exp(-x))
 
 
 # Required layers

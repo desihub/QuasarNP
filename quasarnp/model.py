@@ -4,6 +4,7 @@ QuasarNP is a pure numpy implementation of the original TensorFlow
 QuasarNet. This module only defines the QuasarNP model object and provides
 no other functionality on its own.
 """
+from functools import partial
 import numpy as np
 
 from .layers import conv1d, batch_normalization, dense, flatten, relu, sigmoid, linear
@@ -34,15 +35,16 @@ class QuasarNP():
             self.convs.append(n_conv)
 
         # Don't forget to flatten here before dense layer
-        self.dense = lambda x: dense(x, weights["fc_common"]["kernel"], weights["fc_common"]["bias"], linear)
+        self.dense = partial(dense, w=weights["fc_common"]["kernel"],b= weights["fc_common"]["bias"], phi=linear)
 
         w_batch = self.weights[f"batch_normalization_{nlayers + 1}"]
-        self.batch_norm = lambda x: batch_normalization(x, w_batch["moving_mean"], w_batch["moving_variance"] ,
-                                                             w_batch["beta"], w_batch["gamma"], 0.001)
+        self.batch_norm = partial(batch_normalization, mean=w_batch["moving_mean"], var=w_batch["moving_variance"],
+                                                       beta=w_batch["beta"], gamma=w_batch["gamma"], epsilon=0.001 )
         # Do not forget that there is a relu here after the batch_norm
-        # Then boxes, this is a rescale function for the box offset
-        self.rescale = lambda x: -0.1 + 1.2 * x
 
+    # This is a rescale function for the box offset
+    def rescale(self, x):
+        return  -0.1 + 1.2 * x
 
     def conv_layer(self, x, name):
         w_conv = self.weights[name]
