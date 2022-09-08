@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - [#a7621bb1] Fixed a bug where models with $n\neq4$ layers would use the wrong
 batch normalization weights in the fully connected layer.
+- [#2a6d6395] Removed all lambda functions and replaced them with partial functions or
+full functions to enable pickling of QuasarNP objects. This is necessary for
+multiprocessing purposes.
 
 
 ## [0.1.4] - 2022-07-20
