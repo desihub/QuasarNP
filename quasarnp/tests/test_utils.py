@@ -36,14 +36,14 @@ class TestUtilities(unittest.TestCase):
             expected_bins = ast.literal_eval(f.read().replace("\n", ""))
         self.assertTrue(np.allclose(ob_bins, expected_bins))
         self.assertTrue(np.allclose(ob_keep, np.ones_like(ob_keep, dtype=bool)))
-        
+
     def test_regrid_linear(self):
         # This is the rebinned DESI grid, so regridding it shouldn't do anything.
         # Linear DESI grid information
         wmin, wmax, wdelta = 3600, 9824, 0.8
         wdelta_qnet = wdelta * 17
         new_grid = np.round(np.arange(wmin, wmax + wdelta, wdelta_qnet), 1)
-        
+
         ob_bins, ob_keep = regrid(new_grid, linear=True)
         expected_bins = np.arange(458)
         self.assertTrue(np.allclose(ob_bins, expected_bins))
@@ -84,6 +84,36 @@ class TestUtilities(unittest.TestCase):
 
                     # Rebin the flux and ivar
                     n_flux, n_ivar = rebin(flux, ivar, w_grid)
+
+                    # Just checks that the rebinned is equal to the known
+                    # "correct" rebinning
+                    self.assertTrue(np.allclose(n_flux, h2[fluxname].read()[:]))
+                    self.assertTrue(np.allclose(n_ivar, h2[ivarname].read()[:]))
+
+    # Test rebinning some DESI data. Need this in case rebinning fails on
+    # SDSS/BOSS etc spectra for some reason. Don't call me prescient when it
+    # does and I need to change it.
+    def test_rebin_linear(self):
+        # We will use the test coadd for this test.
+        loc = file_loc / "test_coadd.fits"
+        expected_loc = file_loc / "coadd_rebinned_linear.fits"
+
+        cams = ["B", "R", "Z"]
+        # Load the coadd, and the known correct rebinning.
+        with fitsio.FITS(loc) as h:
+            with fitsio.FITS(expected_loc) as h2:
+                for c in cams:
+                    fluxname = f"{c}_FLUX"
+                    ivarname = f"{c}_IVAR"
+                    wname = f"{c}_WAVELENGTH"
+
+                    # Load the flux and ivar
+                    flux = h[fluxname].read()[:]
+                    ivar = h[ivarname].read()[:]
+                    w_grid = h[wname].read()
+
+                    # Rebin the flux and ivar
+                    n_flux, n_ivar = rebin(flux, ivar, w_grid, linear=True)
 
                     # Just checks that the rebinned is equal to the known
                     # "correct" rebinning
