@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.6] - Unreleased
 ### Added
+- [#9500d28e] Added an option to use a linear QuasarNET grid.
+- [#3a279e4a] Added unit test for regridding to a linear grid.
+- [#1816846f] Added unit test for rebinning to a linear grid.
 
 ### Changed
 
