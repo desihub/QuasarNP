@@ -14,7 +14,7 @@ file_loc = pathlib.Path(__file__).parent.resolve() / "test_files"
 class TestUtilities(unittest.TestCase):
     # Test taking the old grid and generating which bins on the new grid
     # the grid goes into.
-    def test_regrid(self):
+    def test_regrid_log(self):
         # This is the new grid, so regridding it shouldn't do anything.
         new_grid = 10 ** (np.arange(np.log10(3600), np.log10(10000), 1e-3))
         ob_bins, ob_keep = regrid(new_grid)
@@ -34,6 +34,29 @@ class TestUtilities(unittest.TestCase):
         loc = file_loc / "regrid.txt"
         with open(loc, 'r') as f:
             expected_bins = ast.literal_eval(f.read().replace("\n", ""))
+        self.assertTrue(np.allclose(ob_bins, expected_bins))
+        self.assertTrue(np.allclose(ob_keep, np.ones_like(ob_keep, dtype=bool)))
+        
+    def test_regrid_linear(self):
+        # This is the rebinned DESI grid, so regridding it shouldn't do anything.
+        # Linear DESI grid information
+        wmin, wmax, wdelta = 3600, 9824, 0.8
+        wdelta_qnet = wdelta * 17
+        new_grid = np.round(np.arange(wmin, wmax + wdelta, wdelta_qnet), 1)
+        
+        ob_bins, ob_keep = regrid(new_grid, linear=True)
+        expected_bins = np.arange(458)
+        self.assertTrue(np.allclose(ob_bins, expected_bins))
+        self.assertTrue(np.allclose(ob_keep, np.ones_like(ob_keep, dtype=bool)))
+
+        # Testing regridding the DESI grid into the linear QuasarNet grid.
+        old_grid = np.round(np.arange(wmin, wmax + wdelta, wdelta), 1)
+        ob_bins, ob_keep = regrid(old_grid, linear=True)
+
+        # 17 DESI bins per linear QuasarNET bin, but 17 * 458 is slightly
+        # longer than the true DESI grid, so the last bin only
+        # gets 12 bins. Hence the shave off of 5 at the end.
+        expected_bins =  np.repeat(np.arange(458), 17)[:-5]
         self.assertTrue(np.allclose(ob_bins, expected_bins))
         self.assertTrue(np.allclose(ob_keep, np.ones_like(ob_keep, dtype=bool)))
 
