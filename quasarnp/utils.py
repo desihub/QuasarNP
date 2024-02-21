@@ -51,14 +51,6 @@ absorber_IGM = {
     'LYB'         : 1025.72,
 }
 
-# TODO: Make these editable and expose them publicly.
-# Perhaps in the same way Farr did?
-l_min = np.log10(3600.)
-l_max = np.log10(10000.)
-dl = 1e-3
-nbins = int((l_max - l_min) / dl)
-wave = 10**(l_min + np.arange(nbins) * dl)
-
 
 def process_preds(preds, lines, lines_bal, verbose=True):
     """Convert network output to line confidence and redshift predictions.
@@ -142,13 +134,37 @@ def process_preds(preds, lines, lines_bal, verbose=True):
     return c_line, z_line, zbest, c_line_bal, z_line_bal
 
 
-def regrid(old_grid):
+# Log SDSS grid information
+# TODO: Make these editable and expose them publicly.
+# Perhaps in the same way Farr did?
+l_min = np.log10(3600.)
+l_max = np.log10(10000.)
+dl = 1e-3 #* 2
+nbins = int((l_max - l_min) / dl)
+wave = 10**(l_min + np.arange(nbins) * dl)
+
+
+# Linear DESI grid information
+wmin, wmax, wdelta = 3600, 9824, 0.8
+desi_wave = np.round(np.arange(wmin, wmax + wdelta, wdelta), 1)
+
+# 17 seems arbitrary but its the constant needed to get approximately
+# the same number of linear bins as in the logarithmic case
+# (458 vs 443)
+wdelta_qnet = wdelta * 17
+linear_wave = np.round(np.arange(wmin, wmax + wdelta, wdelta_qnet), 1)
+nbins_linear = len(linear_wave)
+
+def regrid(old_grid, linear=False):
     """Generate the mapping from the old wavelength grid to the QuasarNet grid.
 
     Parameters
     ----------
     old_grid : numpy.ndarray
         The old wavelength grid.
+    linear : bool, optional
+        Whether to rebin to a linear output grid rather than the default
+        logarithmic QuasarNET grid. Defaults to False.
 
     Returns
     -------
@@ -160,13 +176,21 @@ def regrid(old_grid):
         wavelength bin is contained within the new grid boundaries and False if
         it is not.
     """
-    bins = np.floor((np.log10(old_grid) - l_min) / dl).astype(int)
-    w = (bins >= 0) & (bins < nbins)
+    if linear:
+        # Rounding off at the 10th decimal place helps avoid float rounding errors when
+        # rebinning the desi grid to qnet grids since the latter should be an integer
+        # number of the former bins.
+        bins = np.floor(np.round(((old_grid - wmin) / (wdelta_qnet)), decimals=10)).astype(int)
+        w = (bins >= 0) & (bins < nbins_linear)
+
+    else:
+        bins = np.floor((np.log10(old_grid) - l_min) / dl).astype(int)
+        w = (bins >= 0) & (bins < nbins)
 
     return bins, w
 
 
-def rebin(flux, ivar, w_grid):
+def rebin(flux, ivar, w_grid, linear=False):
     """Rebin flux to the QuasarNet wavelength grid.
 
     The process for rebinning flux is as follows. First, the flux is multiplied
@@ -183,6 +207,9 @@ def rebin(flux, ivar, w_grid):
         Input ivar array of shape `(nspec, len(w_grid))`.
     w_grid: numpy.ndarray
         Input wavelength grid.
+    linear : bool, optional
+        Whether to rebin to a linear output grid rather than the default
+        logarithmic QuasarNET grid. Defaults to False.
 
     Returns
     -------
@@ -195,13 +222,16 @@ def rebin(flux, ivar, w_grid):
     --------
     regrid : Function that converts the old wavelength grid to the new grid.
     """
-    new_grid, w = regrid(w_grid)
+    new_grid, w = regrid(w_grid, linear)
 
     fl_iv = flux * ivar
 
     # len(flux) will give number of spectra,
     # len(new_grid) will give number of output bins
-    flux_out = np.zeros((len(flux), nbins))
+    if linear:
+        flux_out = np.zeros((len(flux), nbins_linear))
+    else:
+        flux_out = np.zeros((len(flux), nbins))
     ivar_out = np.zeros_like(flux_out)
 
     # These lines are necessary for SDSS spectra. For DESI
