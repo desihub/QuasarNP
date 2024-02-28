@@ -52,6 +52,29 @@ absorber_IGM = {
 }
 
 
+
+# Log SDSS grid information
+# TODO: Make these editable and expose them publicly.
+# Perhaps in the same way Farr did?
+l_min = np.log10(3600.)
+l_max = np.log10(10000.)
+dl = 1e-3 #* 2
+nbins = int((l_max - l_min) / dl)
+wave = 10**(l_min + np.arange(nbins) * dl)
+
+
+# Linear DESI grid information
+wmin, wmax, wdelta = 3600, 9824, 0.8
+desi_wave = np.round(np.arange(wmin, wmax + wdelta, wdelta), 1)
+
+# 17 seems arbitrary but its the constant needed to get approximately
+# the same number of linear bins as in the logarithmic case
+# (458 vs 443)
+wdelta_qnet = wdelta * 17
+linear_wave = np.round(np.arange(wmin, wmax + wdelta, wdelta_qnet), 1)
+nbins_linear = len(linear_wave)
+
+
 def process_preds(preds, lines, lines_bal, verbose=True):
     """Convert network output to line confidence and redshift predictions.
 
@@ -111,6 +134,11 @@ def process_preds(preds, lines, lines_bal, verbose=True):
 
         # Confidence in line, redshift of line
         c_line[il] = preds[il][:, :13].max(axis=1)
+
+        # Take the "index" (sclara index + float offset), map that to
+        # a box and how far into that box the line is, convert that
+        # box distance to a wavelength. Convert the wavelength to a
+        # redshift.
         z_line[il] = (i_to_wave((j + offset) * len(wave) / nboxes) / l) - 1
 
     # Not "best redshift", rather "redshift of most confident line"
@@ -132,28 +160,6 @@ def process_preds(preds, lines, lines_bal, verbose=True):
         z_line_bal[il] = (i_to_wave((j + offset) * len(wave) / nboxes) / l) - 1
 
     return c_line, z_line, zbest, c_line_bal, z_line_bal
-
-
-# Log SDSS grid information
-# TODO: Make these editable and expose them publicly.
-# Perhaps in the same way Farr did?
-l_min = np.log10(3600.)
-l_max = np.log10(10000.)
-dl = 1e-3 #* 2
-nbins = int((l_max - l_min) / dl)
-wave = 10**(l_min + np.arange(nbins) * dl)
-
-
-# Linear DESI grid information
-wmin, wmax, wdelta = 3600, 9824, 0.8
-desi_wave = np.round(np.arange(wmin, wmax + wdelta, wdelta), 1)
-
-# 17 seems arbitrary but its the constant needed to get approximately
-# the same number of linear bins as in the logarithmic case
-# (458 vs 443)
-wdelta_qnet = wdelta * 17
-linear_wave = np.round(np.arange(wmin, wmax + wdelta, wdelta_qnet), 1)
-nbins_linear = len(linear_wave)
 
 def regrid(old_grid, linear=False):
     """Generate the mapping from the old wavelength grid to the QuasarNet grid.
