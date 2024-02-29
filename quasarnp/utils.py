@@ -52,7 +52,6 @@ absorber_IGM = {
 }
 
 
-
 # Log SDSS grid information
 # TODO: Make these editable and expose them publicly.
 # Perhaps in the same way Farr did?
@@ -61,7 +60,6 @@ l_max = np.log10(10000.)
 dl = 1e-3 #* 2
 nbins = int((l_max - l_min) / dl)
 wave = 10**(l_min + np.arange(nbins) * dl)
-
 
 # Linear DESI grid information
 wmin, wmax, wdelta = 3600, 9824, 0.8
@@ -75,7 +73,7 @@ linear_wave = np.round(np.arange(wmin, wmax + wdelta, wdelta_qnet), 1)
 nbins_linear = len(linear_wave)
 
 
-def process_preds(preds, lines, lines_bal, verbose=True):
+def process_preds(preds, lines, lines_bal, verbose=True, wave=wave):
     """Convert network output to line confidence and redshift predictions.
 
     Parameters
