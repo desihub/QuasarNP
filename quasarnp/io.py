@@ -26,8 +26,12 @@ def load_file(filename):
         The name of the weights file.
     Returns
     -------
-    dict
+    result : dict
         Dictionary that maps layer names to layer weights.
+    config_dict : dict
+        Dictionary of model configuration options including padding mode
+    is_linear : bool
+        Whether the network is expecting a linear or a logarithmic grid
     """
     result = {}
 
@@ -77,7 +81,8 @@ def load_file(filename):
             temp[k] = m_config["config"]["layers"][idx]["config"][k]
         config_dict[l] = temp
 
-    return result, config_dict
+    is_linear = m_config["config"]["layers"][0]["config"]["batch_input_shape"][1] == 458
+    return result, config_dict, is_linear
 
 
 def load_model(filename):
@@ -91,15 +96,17 @@ def load_model(filename):
     -------
     QuasarNP
         Callable QuasarNP model with the weights provided by `filename`.
+    is_linear : bool
+        Whether the model is expecting a linear grid or logarithmic grid.
     """
-    db, config = load_file(filename)
+    db, config, is_linear = load_file(filename)
 
     nlayers = len([k for k in db.keys() if k.startswith("conv")])
 
     if "lambda" in db:
-        return QuasarNP(db, rescale=True, nlayers=nlayers, config_dict=config)
+        return QuasarNP(db, rescale=True, nlayers=nlayers, config_dict=config), is_linear
     else:
-        return QuasarNP(db, nlayers=nlayers, config_dict=config)
+        return QuasarNP(db, nlayers=nlayers, config_dict=config), is_linear
 
 
 def read_truth(fi):
@@ -488,7 +495,7 @@ def load_desi_coadd(filename, rows=None, linear=False):
             ivar_out += new_ivar
 
     non_zero = ivar_out != 0
-    
+
     X_out[non_zero] /= ivar_out[non_zero]
 
     nonzero_weights = np.sum(ivar_out, axis=1) != 0
