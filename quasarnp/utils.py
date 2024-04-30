@@ -194,7 +194,7 @@ def regrid(old_grid, linear=False):
     return bins, w
 
 
-def rebin(flux, ivar, w_grid, linear=False):
+def rebin(flux, ivar, w_grid, out_grid=wave):
     """Rebin flux to the QuasarNet wavelength grid.
 
     The process for rebinning flux is as follows. First, the flux is multiplied
@@ -211,9 +211,8 @@ def rebin(flux, ivar, w_grid, linear=False):
         Input ivar array of shape `(nspec, len(w_grid))`.
     w_grid: numpy.ndarray
         Input wavelength grid.
-    linear : bool, optional
-        Whether to rebin to a linear output grid rather than the default
-        logarithmic QuasarNET grid. Defaults to False.
+    out_grid : numpy.ndarray, optional
+        The wavelength grid to rebin the loaded exposure to.
 
     Returns
     -------
@@ -226,6 +225,10 @@ def rebin(flux, ivar, w_grid, linear=False):
     --------
     regrid : Function that converts the old wavelength grid to the new grid.
     """
+
+    if len(out_grid) == len(wave): linear = False
+    else: linear = True
+
     new_grid, w = regrid(w_grid, linear)
 
     fl_iv = flux * ivar

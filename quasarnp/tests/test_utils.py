@@ -6,7 +6,7 @@ import numpy as np
 
 import fitsio
 
-from quasarnp.utils import regrid, process_preds, rebin
+from quasarnp.utils import regrid, process_preds, rebin, wave, linear_wave
 
 file_loc = pathlib.Path(__file__).parent.resolve() / "test_files"
 
@@ -83,7 +83,7 @@ class TestUtilities(unittest.TestCase):
                     w_grid = h[wname].read()
 
                     # Rebin the flux and ivar
-                    n_flux, n_ivar = rebin(flux, ivar, w_grid)
+                    n_flux, n_ivar = rebin(flux, ivar, w_grid, out_grid=wave)
 
                     # Just checks that the rebinned is equal to the known
                     # "correct" rebinning
@@ -113,7 +113,7 @@ class TestUtilities(unittest.TestCase):
                     w_grid = h[wname].read()
 
                     # Rebin the flux and ivar
-                    n_flux, n_ivar = rebin(flux, ivar, w_grid, linear=True)
+                    n_flux, n_ivar = rebin(flux, ivar, w_grid, out_grid=linear_wave)
 
                     # Just checks that the rebinned is equal to the known
                     # "correct" rebinning
