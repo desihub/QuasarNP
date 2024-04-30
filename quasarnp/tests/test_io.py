@@ -65,6 +65,16 @@ class TestLoadingModel(unittest.TestCase):
 
         self.assertFalse(is_linear)
 
+    def test_load_linear_weights(self):
+        # Get the location of this test script and load the test_weights file
+        # in this lower level directory.
+        loc = file_loc / "test_linear_weights.h5"
+
+        # If it fails here we have a problem lol.
+        weights_dict, config_dict, is_linear = quasarnp.io.load_file(loc)
+
+        self.assertTrue(is_linear)
+
 class TestLoadingData(unittest.TestCase):
     def test_load_desi_coadd(self):
         # This test coadd was constructed by keeping the first 25 fibers from
