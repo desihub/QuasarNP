@@ -15,7 +15,7 @@ class TestLoadingModel(unittest.TestCase):
         loc = file_loc / "test_weights.h5"
 
         # If it fails here we have a problem lol.
-        weights_dict, config_dict = quasarnp.io.load_file(loc)
+        weights_dict, config_dict, is_linear = quasarnp.io.load_file(loc)
 
         # Check that we got all the keys we need.
         expected_keys = ['batch_normalization_1', 'batch_normalization_2',
@@ -62,6 +62,8 @@ class TestLoadingModel(unittest.TestCase):
         expected = "valid"
         observed = config_dict["conv_1"]["padding"]
         self.assertEqual(observed, expected)
+
+        self.assertFalse(is_linear)
 
 class TestLoadingData(unittest.TestCase):
     def test_load_desi_coadd(self):
