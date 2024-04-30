@@ -4,6 +4,7 @@ import unittest
 import numpy as np
 
 import quasarnp.io
+from quasarnp.utils import wave, linear_wave
 
 file_loc = pathlib.Path(__file__).parent.resolve() / "test_files"
 
@@ -15,7 +16,7 @@ class TestLoadingModel(unittest.TestCase):
         loc = file_loc / "test_weights.h5"
 
         # If it fails here we have a problem lol.
-        weights_dict, config_dict, is_linear = quasarnp.io.load_file(loc)
+        weights_dict, config_dict, w_grid = quasarnp.io.load_file(loc)
 
         # Check that we got all the keys we need.
         expected_keys = ['batch_normalization_1', 'batch_normalization_2',
@@ -63,17 +64,21 @@ class TestLoadingModel(unittest.TestCase):
         observed = config_dict["conv_1"]["padding"]
         self.assertEqual(observed, expected)
 
-        self.assertFalse(is_linear)
+        self.assertTrue(np.allclose(w_grid, wave))
 
     def test_load_linear_weights(self):
         # Get the location of this test script and load the test_weights file
         # in this lower level directory.
         loc = file_loc / "test_linear_weights.h5"
 
-        # If it fails here we have a problem lol.
-        weights_dict, config_dict, is_linear = quasarnp.io.load_file(loc)
+        # This one should auto derive to log even though it's linear since
+        # we didn't post process to add the linear data.
+        *_, w_grid = quasarnp.io.load_file(loc)
+        self.assertTrue(np.allclose(w_grid, wave))
 
-        self.assertTrue(is_linear)
+        loc = file_loc / "test_post_processed.h5"
+        *_, w_grid = quasarnp.io.load_file(loc)
+        self.assertTrue(np.allclose(w_grid, linear_wave))
 
 class TestLoadingData(unittest.TestCase):
     def test_load_desi_coadd(self):

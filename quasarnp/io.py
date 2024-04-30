@@ -14,7 +14,7 @@ import h5py
 import numpy as np
 
 from .model import QuasarNP
-from .utils import rebin, renormalize, nbins, nbins_linear
+from .utils import rebin, renormalize, nbins, nbins_linear, wave
 
 
 def load_file(filename):
@@ -29,15 +29,21 @@ def load_file(filename):
     result : dict
         Dictionary that maps layer names to layer weights.
     config_dict : dict
-        Dictionary of model configuration options including padding mode
-    is_linear : bool
-        Whether the network is expecting a linear or a logarithmic grid
+        Dictionary of model configuration options including padding mode.
+    w_grid : numpy.ndarray
+        Wavelength grid used to train this network.
     """
     result = {}
 
     with h5py.File(filename, "r") as f:
         m_weights = f['model_weights']
         m_config = json.loads(f.attrs["model_config"])
+
+        try:
+            w_grid = f["model_grid"][:]
+        except KeyError:
+            print("Model grid not found in file, defaulting to logarithmic")
+            w_grid = wave
 
         # Some versions of TF/Keras are 1 indexed and so bn layers start
         # at batch_normalization_1. Some versions are 0 indexed and start at
@@ -81,8 +87,7 @@ def load_file(filename):
             temp[k] = m_config["config"]["layers"][idx]["config"][k]
         config_dict[l] = temp
 
-    is_linear = m_config["config"]["layers"][0]["config"]["batch_input_shape"][1] == 458
-    return result, config_dict, is_linear
+    return result, config_dict, w_grid
 
 
 def load_model(filename):
@@ -96,17 +101,17 @@ def load_model(filename):
     -------
     QuasarNP
         Callable QuasarNP model with the weights provided by `filename`.
-    is_linear : bool
-        Whether the model is expecting a linear grid or logarithmic grid.
+    w_grid : numpy.ndarray
+        Wavelength grid used to train this network.
     """
-    db, config, is_linear = load_file(filename)
+    db, config, w_grid = load_file(filename)
 
     nlayers = len([k for k in db.keys() if k.startswith("conv")])
 
     if "lambda" in db:
-        return QuasarNP(db, rescale=True, nlayers=nlayers, config_dict=config), is_linear
+        return QuasarNP(db, rescale=True, nlayers=nlayers, config_dict=config), w_grid
     else:
-        return QuasarNP(db, nlayers=nlayers, config_dict=config), is_linear
+        return QuasarNP(db, nlayers=nlayers, config_dict=config), w_grid
 
 
 def read_truth(fi):
