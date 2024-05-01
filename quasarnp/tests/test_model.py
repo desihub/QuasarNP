@@ -26,7 +26,7 @@ class TestModels(unittest.TestCase):
 
         X, w = load_desi_coadd(data_loc)
 
-        qnp_model = load_model(weights_loc)
+        qnp_model, _ = load_model(weights_loc)
         qnp_predict = qnp_model.predict(X[:, :, None])
 
         qnet_predict = np.load(file_loc / "qnet_output_6_layer.npy")

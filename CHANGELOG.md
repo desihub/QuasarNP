@@ -6,12 +6,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.1] - Unreleased
+## [0.2.0] - 2024-05-01
+This release significantly changes the QuasarNP API in a way that **is not** backwards compatible.
 ### Added
+- [#8310be5e] `load_model` and `load_file` now auto derive whether the QuasarNP model
+represented by the weights file uses a linear or a logarithmic grid. By default
+the function assumes the default QuasarNET logarithmic grid.
+- [#a546c2e7] A post processing script,
+`scripts/post_process_weights.py` is provided that can embed either the default
+QuasarNET logarithmic grid or the QuasarNET linear grid directly into a weights
+file in the way that these functions expect.
+
 
 ### Changed
+- [#c629d43c] `load_desi_*` now accepts an arbitrary input grid instead of a boolean for linear grids.
+This means that instead of passing `linear=True` to load to a linear QuasarNET grid the user must
+explicitly pass the linear grid. The default is to use the logarithmic grid.
+- [#b0a79e65] `regrid`, `rebin` and other associated functions now also accept arbitrary grids
+and not a boolean. Note that these will fail on "unusual" grids, i.e. all arbitrary output
+grids must have either constant linear or constant logarithmic spacing.
+- [various] Unit tests are added or updated to reflect the various API changes.
 
-## [0.2.0] - 2024-04-30
+## [0.1.6] - 2024-04-30
 ### Added
 - [#9500d28e] Added an option to use a linear QuasarNET grid.
 - [#3a279e4a] Added unit test for regridding to a linear grid.

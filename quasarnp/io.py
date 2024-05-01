@@ -14,7 +14,7 @@ import h5py
 import numpy as np
 
 from .model import QuasarNP
-from .utils import rebin, renormalize, nbins, nbins_linear
+from .utils import rebin, renormalize, nbins, nbins_linear, wave, linear_wave
 
 
 def load_file(filename):
@@ -26,14 +26,24 @@ def load_file(filename):
         The name of the weights file.
     Returns
     -------
-    dict
+    result : dict
         Dictionary that maps layer names to layer weights.
+    config_dict : dict
+        Dictionary of model configuration options including padding mode.
+    w_grid : numpy.ndarray
+        Wavelength grid used to train this network.
     """
     result = {}
 
     with h5py.File(filename, "r") as f:
         m_weights = f['model_weights']
         m_config = json.loads(f.attrs["model_config"])
+
+        try:
+            w_grid = f["model_grid"][:]
+        except KeyError:
+            print("Model grid not found in file, defaulting to logarithmic")
+            w_grid = wave
 
         # Some versions of TF/Keras are 1 indexed and so bn layers start
         # at batch_normalization_1. Some versions are 0 indexed and start at
@@ -77,7 +87,7 @@ def load_file(filename):
             temp[k] = m_config["config"]["layers"][idx]["config"][k]
         config_dict[l] = temp
 
-    return result, config_dict
+    return result, config_dict, w_grid
 
 
 def load_model(filename):
@@ -91,15 +101,17 @@ def load_model(filename):
     -------
     QuasarNP
         Callable QuasarNP model with the weights provided by `filename`.
+    w_grid : numpy.ndarray
+        Wavelength grid used to train this network.
     """
-    db, config = load_file(filename)
+    db, config, w_grid = load_file(filename)
 
     nlayers = len([k for k in db.keys() if k.startswith("conv")])
 
     if "lambda" in db:
-        return QuasarNP(db, rescale=True, nlayers=nlayers, config_dict=config)
+        return QuasarNP(db, rescale=True, nlayers=nlayers, config_dict=config), w_grid
     else:
-        return QuasarNP(db, nlayers=nlayers, config_dict=config)
+        return QuasarNP(db, nlayers=nlayers, config_dict=config), w_grid
 
 
 def read_truth(fi):
@@ -335,7 +347,7 @@ def read_data(fi, truth=None, z_lim=2.1, return_pmf=False, nspec=None):
 
 def load_desi_exposure(dir_name, spec_number,
                        fibers=np.ones(500, dtype="bool"),
-                       linear=False):
+                       out_grid=wave):
     """Load and renormalize a raw DESI spectrographic exposure.
 
     This method will load B, R and Z cframe files in sequence. First, spectra
@@ -352,20 +364,20 @@ def load_desi_exposure(dir_name, spec_number,
         Directory to load exposure from.
     spec_number : int
         Spectrograph number to load.
-    fibers : numpy.ndarray, optional.
+    fibers : numpy.ndarray, optional
         Array of length 500 indicating whether each fiber should be loaded.
         True if the fiber should be loaded, False otherwise. Defaults to
         True for all 500 fibers.
-    linear : bool, optional
-        Whether to rebin to a linear output grid rather than the default
-        logarithmic QuasarNET grid. Defaults to False.
+    out_grid : numpy.ndarray, optional
+        The wavelength grid to rebin the loaded exposure to. Defaults to the
+        logarithmic QuasarNET grid.
 
     Returns
     -------
     X_out : numpy.ndarray
         Renormalized and rebinned spectra. Output spectra will have shape
-        `(nspectra, nbins)` where `nbins=443` for the QuasarNet wavelength grid if
-        linear=False or `nbins=458` if linear=True.
+        `(nspectra, nbins)` where `nbins=len(out_grid)` for the QuasarNet wavelength grid,
+        443 for logarithmic or 458 for linear.
     w : numpy.ndarray
         Array of length `sum(fibers == True)` where each element is True if
         the spectra was kept in `X_out` and False if the spectra was discarded.
@@ -401,7 +413,7 @@ def load_desi_exposure(dir_name, spec_number,
             w_grid = h["WAVELENGTH"].read()
 
         # Rebin the flux and ivar
-        new_flux, new_ivar = rebin(flux, ivar, w_grid, False)
+        new_flux, new_ivar = rebin(flux, ivar, w_grid, out_grid=out_grid)
 
         X_out += new_flux
         ivar_out += new_ivar
@@ -418,7 +430,7 @@ def load_desi_exposure(dir_name, spec_number,
     return X_out, np.where(nonzero_weights)[0]
 
 
-def load_desi_coadd(filename, rows=None, linear=False):
+def load_desi_coadd(filename, rows=None, out_grid=wave):
     """Load and renormalize a DESI coadded spectrographic exposure.
 
     This method will load a coadd file and renormalize as follows. First,
@@ -437,16 +449,15 @@ def load_desi_coadd(filename, rows=None, linear=False):
         Boolean array indicating whether each row should be loaded. True
         if the row should be loaded, False otherwise. Defaults to None, which
         loads all rows.
-    linear : bool, optional
-        Whether to rebin to a linear output grid rather than the default
-        logarithmic QuasarNET grid. Defaults to False.
+    out_grid : numpy.ndarray, optional
+        The wavelength grid to rebin the loaded exposure to.
 
     Returns
     -------
     X_out : numpy.ndarray
         Renormalized and rebinned spectra. Output spectra will have shape
-        `(nspectra, nbins)` where `nbins=443` for the QuasarNet wavelength grid if
-        linear=False or `nbins=458` if linear=True.
+        `(nspectra, nbins)` where `nbins=len(out_grid)` for the QuasarNet wavelength grid,
+        443 for logarithmic or 458 for linear.
     w : numpy.ndarray
         Array of length `sum(rows == True)` where each element is True if
         the spectra was kept in `X_out` and False if the spectra was discarded.
@@ -464,10 +475,7 @@ def load_desi_coadd(filename, rows=None, linear=False):
             rows = np.ones(nfibers, dtype='bool')
         else:
             nfibers = np.sum(rows > 0)
-        if linear:
-             X_out = np.zeros((nfibers, nbins_linear))
-        else:
-            X_out = np.zeros((nfibers, nbins))
+        X_out = np.zeros((nfibers, len(out_grid)))
         # ivar_out is the weights out, we use this for normalization
         # Use zeros_like so we only have to change one
         ivar_out = np.zeros_like(X_out)
@@ -482,13 +490,13 @@ def load_desi_coadd(filename, rows=None, linear=False):
             w_grid = h[wname].read()
 
             # Rebin the flux and ivar
-            new_flux, new_ivar = rebin(flux, ivar, w_grid, linear)
+            new_flux, new_ivar = rebin(flux, ivar, w_grid, out_grid=out_grid)
 
             X_out += new_flux
             ivar_out += new_ivar
 
     non_zero = ivar_out != 0
-    
+
     X_out[non_zero] /= ivar_out[non_zero]
 
     nonzero_weights = np.sum(ivar_out, axis=1) != 0
@@ -503,7 +511,7 @@ def load_desi_coadd(filename, rows=None, linear=False):
 
 def load_desi_daily(night, exp_id, spec_number,
                     fibers=np.ones(500, dtype="bool"),
-                    linear=False):
+                    w_grid=wave):
     """Load and renormalize a daily DESI spectrographic exposure.
 
     This method will load B, R and Z cframe files in sequence. First, spectra
@@ -526,16 +534,15 @@ def load_desi_daily(night, exp_id, spec_number,
         Array of length 500 indicating whether each fiber should be loaded.
         True if the fiber should be loaded, False otherwise.
         Defaults to True for all 500 fibers.
-    linear : bool, optional
-        Whether to rebin to a linear output grid rather than the default
-        logarithmic QuasarNET grid. Defaults to False.
+    w_grid : numpy.ndarray, optional
+        The wavelength grid to rebin the loaded exposure to.
 
     Returns
     -------
     X_out : numpy.ndarray
         Renormalized and rebinned spectra. Output spectra will have shape
-        `(nspectra, nbins)` where `nbins=443` for the QuasarNet wavelength grid if
-        linear=False or `nbins=458` if linear=True.
+        `(nspectra, nbins)` where `nbins=len(out_grid)` for the QuasarNet wavelength grid,
+        443 for logarithmic or 458 for linear.
     w : numpy.ndarray
         Array of length `sum(fibers == True)` where each element is True if
         the spectra was kept in `X_out` and False if the spectra was discarded.
@@ -556,7 +563,7 @@ def load_desi_daily(night, exp_id, spec_number,
     root = "/global/cfs/cdirs/desi/spectro/redux/daily/exposures"
     file_loc = Path(root, night, exp_id)
 
-    return load_desi_exposure(file_loc, spec_number, fibers, linear=linear)
+    return load_desi_exposure(file_loc, spec_number, fibers, w_grid=w_grid)
 
 
 # BOSS Related IO below this point
