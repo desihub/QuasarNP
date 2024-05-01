@@ -15,18 +15,17 @@ class TestUtilities(unittest.TestCase):
     # Test taking the old grid and generating which bins on the new grid
     # the grid goes into.
     def test_regrid_log(self):
-        # This is the new grid, so regridding it shouldn't do anything.
-        new_grid = 10 ** (np.arange(np.log10(3600), np.log10(10000), 1e-3))
-        ob_bins, ob_keep = regrid(new_grid)
+        # This is the regrids the grid to itself so shouldn't do anything
+        ob_bins, ob_keep = regrid(wave, wave)
         expected_bins = np.arange(443)
-        expected_bins = np.insert(expected_bins, 0, 0)
+
         self.assertTrue(np.allclose(ob_bins, expected_bins))
         self.assertTrue(np.allclose(ob_keep, np.ones_like(ob_keep, dtype=bool)))
 
         # Testing regridding the DESI grid into the SDSS/QuasarNet grid.
         wmin, wmax, wdelta = 3600, 9824, 0.8
         old_grid = np.round(np.arange(wmin, wmax + wdelta, wdelta), 1)
-        ob_bins, ob_keep = regrid(old_grid)
+        ob_bins, ob_keep = regrid(old_grid, wave)
 
         # In order to not have to overload this file with nuisance, I have moved
         # the actual answer here to regrid.txt. It's quite long, so only
@@ -44,14 +43,14 @@ class TestUtilities(unittest.TestCase):
         wdelta_qnet = wdelta * 17
         new_grid = np.round(np.arange(wmin, wmax + wdelta, wdelta_qnet), 1)
 
-        ob_bins, ob_keep = regrid(new_grid, linear=True)
+        ob_bins, ob_keep = regrid(new_grid, linear_wave)
         expected_bins = np.arange(458)
         self.assertTrue(np.allclose(ob_bins, expected_bins))
         self.assertTrue(np.allclose(ob_keep, np.ones_like(ob_keep, dtype=bool)))
 
         # Testing regridding the DESI grid into the linear QuasarNet grid.
         old_grid = np.round(np.arange(wmin, wmax + wdelta, wdelta), 1)
-        ob_bins, ob_keep = regrid(old_grid, linear=True)
+        ob_bins, ob_keep = regrid(old_grid, linear_wave)
 
         # 17 DESI bins per linear QuasarNET bin, but 17 * 458 is slightly
         # longer than the true DESI grid, so the last bin only
