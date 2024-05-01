@@ -59,6 +59,30 @@ class TestUtilities(unittest.TestCase):
         self.assertTrue(np.allclose(ob_bins, expected_bins))
         self.assertTrue(np.allclose(ob_keep, np.ones_like(ob_keep, dtype=bool)))
 
+    def test_regrid_arbitrary(self):
+        # Stephen Bailey's arbitrary grid
+        old_grid = np.arange(3600, 9800, 10)
+        ob_bins, ob_keep = regrid(old_grid, wave)
+
+        # In order to not have to overload this file with nuisance, I have moved
+        # the actual answer here to regrid_arbitrary.txt. It's quite long, so only
+        # investigate if strictly necessary.
+        loc = file_loc / "regrid_arbitrary.npy"
+        expected_bins = np.load(loc)
+        self.assertTrue(np.allclose(ob_bins, expected_bins))
+        self.assertTrue(np.allclose(ob_keep, np.ones_like(ob_keep, dtype=bool)))
+
+    def test_regrid_failure(self):
+        # Non constant binning should fail and raise a value error.
+        new_grid = np.concatenate([np.arange(3600, 4000, 10), np.arange(4000, 9800, 40)])
+
+        # Testing regridding the DESI grid onto this broken grid
+        wmin, wmax, wdelta = 3600, 9824, 0.8
+        old_grid = np.round(np.arange(wmin, wmax + wdelta, wdelta), 1)
+
+        with self.assertRaises(ValueError):
+            _ = regrid(old_grid, new_grid)
+
     # Test rebinning some DESI data. Need this in case rebinning fails on
     # SDSS/BOSS etc spectra for some reason. Don't call me prescient when it
     # does and I need to change it.
