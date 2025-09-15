@@ -65,7 +65,7 @@ def dense(x, w, b, phi):
 # This has same behavior as:
 # https://www.tensorflow.org/api_docs/python/tf/nn/batch_normalization
 def batch_normalization(x, mean, var, beta, gamma, epsilon):
-    """Computes the batch normalized version of the input.
+    r"""Computes the batch normalized version of the input.
 
     This function implements a batch normalization layer. Batch normalization
     renormalizes the input to the layer to a more parsable data range.
