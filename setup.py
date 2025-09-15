@@ -1,4 +1,4 @@
-import os, sys, glob, re
+import re
 from setuptools import setup, find_packages
 
 def _get_version():
@@ -13,16 +13,8 @@ def _get_version():
     return version
 
 setup_keywords = dict(
-    name='quasarnp',
     version=_get_version(),
-    description='Numpy Implementation of QuasarNet',
-    url='https://github.com/dylanagreen/QuasarNP',
-    author='Dylan Green',
-    author_email='dylanag@uci.edu',
-    license='MIT',
     packages=find_packages(),
-    install_requires=['numpy', 'fitsio', 'h5py'],
-    zip_safe=False,
 )
 
 setup(**setup_keywords)

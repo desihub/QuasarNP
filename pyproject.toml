@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quasarnp"
+description = "Numpy Implementation of QuasarNet"
+dynamic = ["version"]
+authors = [{name = "Dylan Green", email = "dylangreen@lbl.gov"}]
+license = "MIT"
+dependencies = ["numpy",
+                "fitsio",
+                "h5py"]
+readme = "README.md"
