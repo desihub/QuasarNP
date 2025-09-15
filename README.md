@@ -1,14 +1,15 @@
 # QuasarNP
 [![Documentation Status](https://readthedocs.org/projects/quasarnp/badge/?version=latest)](https://quasarnp.readthedocs.io/en/latest/?badge=latest)
-[![Coverage Status](https://coveralls.io/repos/github/desihub/QuasarNP/badge.svg?branch=technical_debt)](https://coveralls.io/github/desihub/QuasarNP?branch=technical_debt)
+[![Coverage Status](https://coveralls.io/repos/github/desihub/QuasarNP/badge.svg?branch=main)](https://coveralls.io/github/desihub/QuasarNP?branch=main)
 
 QuasarNP is a pure numpy implementation of [QuasarNet](https://github.com/ngbusca/QuasarNET) that is designed to work on the default DESI environment at NERSC without any additional dependencies.
 
-Indeed, QuasarNP requires only three things to work:
+ QuasarNP requires only three things to work:
 - Numpy
 - hd5py
 - fitsio
 
+Note that QuasarNP does not follow some of the package conventions established by other DESI packages.
 ## Example Operation on DESI Data
 QuasarNP is designed to be interoperable with prior QuasarNet code.
 
