@@ -12,3 +12,6 @@ dependencies = ["numpy",
                 "fitsio",
                 "h5py"]
 readme = "README.md"
+
+[tool.coverage.report]
+omit = ["quasarnp/tests/*"]
