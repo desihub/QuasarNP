@@ -62,7 +62,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # some external dependencies are not met at build time and break the
 # building process.
 autodoc_mock_imports = []
-for missing in ('fitsio', 'numpy'):
+for missing in ('fitsio', 'h5py', 'numpy'):
     try:
         foo = import_module(missing)
     except ImportError:
