@@ -14,6 +14,7 @@ import os
 import re
 import sys
 sys.path.insert(0, os.path.abspath('..'))
+from importlib import import_module
 
 
 # -- Project information -----------------------------------------------------
@@ -23,8 +24,9 @@ copyright = '2021, Dylan Green'
 author = 'Dylan Green'
 
 # The full version, including alpha/beta/rc tags
-line = open('../quasarnp/_version.py').readline().strip()
-m = re.match("__version__\s*=\s*'(.*)'", line)
+with open('../quasarnp/_version.py') as VER:
+    line = VER.readline().strip()
+m = re.match(r"__version__\s*=\s*'(.*)'", line)
 release = m.groups()[0]
 
 
@@ -34,7 +36,7 @@ release = m.groups()[0]
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-  'sphinx.ext.napoleon',
+    'sphinx.ext.napoleon',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
@@ -46,7 +48,6 @@ extensions = [
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
     'h5py': ('https://docs.h5py.org/en/latest/', None)
     }
 # Add any paths that contain templates here, relative to this directory.
@@ -57,6 +58,15 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
+# This value contains a list of modules to be mocked up. This is useful when
+# some external dependencies are not met at build time and break the
+# building process.
+autodoc_mock_imports = []
+for missing in ('fitsio', 'h5py', 'numpy'):
+    try:
+        foo = import_module(missing)
+    except ImportError:
+        autodoc_mock_imports.append(missing)
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -68,4 +78,4 @@ html_theme = 'alabaster'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+# html_static_path = ['_static']
