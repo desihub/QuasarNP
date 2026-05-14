@@ -118,7 +118,11 @@ class WaveGrid():
             self.wave = grid
             self.wmin = grid[0]
             self.wmax = grid[-1]
-            self.wdelta = grid[1] - grid[0] # Assume uniform, but even if not the first grid spacing is a reasonable choice.
+            # Assume uniform, but even if not the first grid spacing is a reasonable choice.
+            if self.is_linear:
+                self.wdelta = grid[1] - grid[0]
+            else:
+                self.wdelta = np.log10(grid[1]) - np.log10(grid[0])
         else:
             self.wave = 10**(wmin + np.arange(nbins) * wdelta)
 
