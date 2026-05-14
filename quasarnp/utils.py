@@ -102,7 +102,7 @@ class WaveGrid():
             if wmax is None:
                 wmax = 9824
             if wdelta is None:
-                wdelta = 0.8
+                wdelta = 0.8 * 17
 
         else:
             if wmax is None:

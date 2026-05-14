@@ -13,7 +13,6 @@ class TestLoadingModel(unittest.TestCase):
     def setUp(self):
         self.log_wave = WaveGrid(linear=False)
         self.linear_wave = WaveGrid(linear=True)
-        self.linear_wave_qnet = WaveGrid(linear=True, wmin=3600, wmax=9824, wdelta=0.8 * 17)
 
     def test_load_file(self):
         # Get the location of this test script and load the test_weights file
@@ -83,7 +82,7 @@ class TestLoadingModel(unittest.TestCase):
 
         loc = file_loc / "test_post_processed.h5"
         *_, w_grid = quasarnp.io.load_file(loc)
-        self.assertTrue(np.allclose(w_grid.wave, self.linear_wave_qnet.wave))
+        self.assertTrue(np.allclose(w_grid.wave, self.linear_wave.wave))
 
 class TestLoadingData(unittest.TestCase):
     def test_load_desi_coadd(self):

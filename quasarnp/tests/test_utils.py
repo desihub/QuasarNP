@@ -44,7 +44,7 @@ class TestUtilities(unittest.TestCase):
         # This is the rebinned DESI grid, so regridding it shouldn't do anything.
         # Linear DESI grid information
         wmin, wmax, wdelta = 3600, 9824, 0.8
-        wdelta_qnet = wdelta * 17
+        wdelta_qnet = wdelta * 17 # For Linear Quasarnet grid
         new_grid = np.round(np.arange(wmin, wmax + wdelta, wdelta_qnet), 1)
 
         ob_bins, ob_keep = regrid(WaveGrid(grid=new_grid), self.linear_wave)
