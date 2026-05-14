@@ -51,14 +51,6 @@ absorber_IGM = {
     'LYB'         : 1025.72,
 }
 
-
-# # 17 seems arbitrary but its the constant needed to get approximately
-# # the same number of linear bins as in the logarithmic case
-# # (458 vs 443)
-# wdelta_qnet = wdelta * 17
-# linear_wave = np.round(np.arange(wmin, wmax + wdelta, wdelta_qnet), 1)
-# nbins_linear = len(linear_wave)
-
 class WaveGrid():
     def __init__(self, linear=False, wmin=None, wmax=None, wdelta=None, grid=None):
         """
@@ -102,6 +94,9 @@ class WaveGrid():
             if wmax is None:
                 wmax = 9824
             if wdelta is None:
+                # 17 seems arbitrary but its the constant needed to get approximately
+                # the same number of linear bins as in the logarithmic case
+                # (458 vs 443)
                 wdelta = 0.8 * 17
 
         else:
