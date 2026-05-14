@@ -42,10 +42,14 @@ def load_file(filename):
         try:
             w_grid = f["model_grid"][:]
 
+            print(f"{w_grid=}")
+
+            log_grid =  WaveGrid(linear=False)
+            linear_grid = WaveGrid(linear=True)
             # Checking some defaults to correctly initialize the default grids.
-            if np.allclose(w_grid, WaveGrid(linear=False).wave):
+            if (len(w_grid) == len(log_grid)) and np.allclose(w_grid, log_grid.wave):
                 w_grid = WaveGrid(linear=False)
-            elif np.allclose(w_grid, WaveGrid(linear=True).wave):
+            elif (len(w_grid) == len(linear_grid)) and np.allclose(w_grid, linear_grid.wave):
                 w_grid = WaveGrid(linear=True)
             else:
                 w_grid = WaveGrid(grid=w_grid)

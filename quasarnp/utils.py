@@ -118,7 +118,7 @@ class WaveGrid():
             raise ValueError(f"wmin ({wmin}) must be less than wmax ({wmax})!")
 
         if self.is_linear:
-            self.wave = np.round(np.arange(wmin, wmax + wdelta, wdelta), 1)
+            self.wave = np.round(np.arange(wmin, wmax + 1e-3, wdelta), 1)
         elif grid is not None:
             self.wave = grid
             self.wmin = grid[0]
