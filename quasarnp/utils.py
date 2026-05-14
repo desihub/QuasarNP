@@ -129,6 +129,9 @@ class WaveGrid():
 
         self.wmin, self.wmax, self.wdelta = wmin, wmax, wdelta
 
+    def __len__(self):
+        return len(self.wave)
+
 
 def process_preds(preds, lines, lines_bal, verbose=True, wavegrid=WaveGrid(linear=False)):
     """Convert network output to line confidence and redshift predictions.
@@ -181,7 +184,7 @@ def process_preds(preds, lines, lines_bal, verbose=True, wavegrid=WaveGrid(linea
     # Doing non BAL lines first
     c_line = np.zeros((nlines, nspec))
     z_line = np.zeros_like(c_line) # This ensures they're always the same shape.
-    nbins = len(wavegrid.wave)
+    nbins = len(wavegrid)
     i_to_wave = lambda x: np.interp(x, np.arange(nbins), wavegrid.wave)
 
     for il, line in enumerate(lines):
@@ -260,7 +263,7 @@ def regrid(old_grid, new_grid=WaveGrid(linear=False)):
     else:
         raise ValueError("New grid spacing must be constant in either logarithmic or linear wavelength.")
 
-    w = (bins >= 0) & (bins < len(new_grid.wave))
+    w = (bins >= 0) & (bins < len(new_grid))
     return bins, w
 
 
@@ -303,7 +306,7 @@ def rebin(flux, ivar, w_grid, out_grid=WaveGrid(linear=False)):
 
     # len(flux) will give number of spectra,
     # len(new_grid) will give number of output bins
-    flux_out = np.zeros((len(flux), len(out_grid.wave)))
+    flux_out = np.zeros((len(flux), len(out_grid)))
     ivar_out = np.zeros_like(flux_out)
 
     # These lines are necessary for SDSS spectra. For DESI
