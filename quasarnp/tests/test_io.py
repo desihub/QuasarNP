@@ -4,12 +4,16 @@ import unittest
 import numpy as np
 
 import quasarnp.io
-from quasarnp.utils import wave, linear_wave
+from quasarnp.utils import WaveGrid
 
 file_loc = pathlib.Path(__file__).parent.resolve() / "test_files"
 
 
 class TestLoadingModel(unittest.TestCase):
+    def setUp(self):
+        self.log_wave = WaveGrid(linear=False)
+        self.linear_wave = WaveGrid(linear=True)
+
     def test_load_file(self):
         # Get the location of this test script and load the test_weights file
         # in this lower level directory.
@@ -64,7 +68,7 @@ class TestLoadingModel(unittest.TestCase):
         observed = config_dict["conv_1"]["padding"]
         self.assertEqual(observed, expected)
 
-        self.assertTrue(np.allclose(w_grid, wave))
+        self.assertTrue(np.allclose(w_grid.wave, self.log_wave.wave))
 
     def test_load_linear_weights(self):
         # Get the location of this test script and load the test_weights file
@@ -74,11 +78,11 @@ class TestLoadingModel(unittest.TestCase):
         # This one should auto derive to log even though it's linear since
         # we didn't post process to add the linear data.
         *_, w_grid = quasarnp.io.load_file(loc)
-        self.assertTrue(np.allclose(w_grid, wave))
+        self.assertTrue(np.allclose(w_grid.wave, self.log_wave.wave))
 
         loc = file_loc / "test_post_processed.h5"
         *_, w_grid = quasarnp.io.load_file(loc)
-        self.assertTrue(np.allclose(w_grid, linear_wave))
+        self.assertTrue(np.allclose(w_grid.wave, WaveGrid(linear=True).wave))
 
 class TestLoadingData(unittest.TestCase):
     def test_load_desi_coadd(self):

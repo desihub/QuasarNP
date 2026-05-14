@@ -14,7 +14,7 @@ import h5py
 import numpy as np
 
 from .model import QuasarNP
-from .utils import rebin, renormalize, nbins, nbins_linear, wave, linear_wave
+from .utils import rebin, renormalize, WaveGrid
 
 
 def load_file(filename):
@@ -41,9 +41,18 @@ def load_file(filename):
 
         try:
             w_grid = f["model_grid"][:]
+
+            # Checking some defaults to correctly initialize the default grids.
+            if np.allclose(w_grid, WaveGrid(linear=False).wave):
+                w_grid = WaveGrid(linear=False)
+            elif np.allclose(w_grid, WaveGrid(linear=True).wave):
+                w_grid = WaveGrid(linear=True)
+            else:
+                w_grid = WaveGrid(grid=w_grid)
+
         except KeyError:
             print("Model grid not found in file, defaulting to logarithmic")
-            w_grid = wave
+            w_grid = WaveGrid(linear=False)
 
         # Some versions of TF/Keras are 1 indexed and so bn layers start
         # at batch_normalization_1. Some versions are 0 indexed and start at
@@ -347,7 +356,7 @@ def read_data(fi, truth=None, z_lim=2.1, return_pmf=False, nspec=None):
 
 def load_desi_exposure(dir_name, spec_number,
                        fibers=np.ones(500, dtype="bool"),
-                       out_grid=wave):
+                       out_grid=WaveGrid(linear=False)):
     """Load and renormalize a raw DESI spectrographic exposure.
 
     This method will load B, R and Z cframe files in sequence. First, spectra
@@ -368,7 +377,7 @@ def load_desi_exposure(dir_name, spec_number,
         Array of length 500 indicating whether each fiber should be loaded.
         True if the fiber should be loaded, False otherwise. Defaults to
         True for all 500 fibers.
-    out_grid : numpy.ndarray, optional
+    out_grid : WaveGrid, optional
         The wavelength grid to rebin the loaded exposure to. Defaults to the
         logarithmic QuasarNET grid.
 
@@ -410,7 +419,7 @@ def load_desi_exposure(dir_name, spec_number,
             # Load the flux and ivar
             flux = h["FLUX"].read()[fibers, :]
             ivar = h["IVAR"].read()[fibers, :]
-            w_grid = h["WAVELENGTH"].read()
+            w_grid = WaveGrid(grid=h["WAVELENGTH"].read())
 
         # Rebin the flux and ivar
         new_flux, new_ivar = rebin(flux, ivar, w_grid, out_grid=out_grid)
@@ -430,7 +439,7 @@ def load_desi_exposure(dir_name, spec_number,
     return X_out, np.where(nonzero_weights)[0]
 
 
-def load_desi_coadd(filename, rows=None, out_grid=wave):
+def load_desi_coadd(filename, rows=None, out_grid=WaveGrid(linear=False)):
     """Load and renormalize a DESI coadded spectrographic exposure.
 
     This method will load a coadd file and renormalize as follows. First,
@@ -450,7 +459,8 @@ def load_desi_coadd(filename, rows=None, out_grid=wave):
         if the row should be loaded, False otherwise. Defaults to None, which
         loads all rows.
     out_grid : numpy.ndarray, optional
-        The wavelength grid to rebin the loaded exposure to.
+        The wavelength grid to rebin the loaded exposure to. Defaults to the
+        logarithmic QuasarNET grid.
 
     Returns
     -------
@@ -487,7 +497,7 @@ def load_desi_coadd(filename, rows=None, out_grid=wave):
             # Load the flux and ivar
             flux = h[fluxname].read()[rows, :]
             ivar = h[ivarname].read()[rows, :]
-            w_grid = h[wname].read()
+            w_grid = WaveGrid(grid=h[wname].read())
 
             # Rebin the flux and ivar
             new_flux, new_ivar = rebin(flux, ivar, w_grid, out_grid=out_grid)
@@ -511,7 +521,7 @@ def load_desi_coadd(filename, rows=None, out_grid=wave):
 
 def load_desi_daily(night, exp_id, spec_number,
                     fibers=np.ones(500, dtype="bool"),
-                    w_grid=wave):
+                    w_grid=WaveGrid(linear=False)):
     """Load and renormalize a daily DESI spectrographic exposure.
 
     This method will load B, R and Z cframe files in sequence. First, spectra
@@ -535,7 +545,8 @@ def load_desi_daily(night, exp_id, spec_number,
         True if the fiber should be loaded, False otherwise.
         Defaults to True for all 500 fibers.
     w_grid : numpy.ndarray, optional
-        The wavelength grid to rebin the loaded exposure to.
+        The wavelength grid to rebin the loaded exposure to. Defaults to the
+        logarithmic QuasarNET grid.
 
     Returns
     -------
@@ -560,6 +571,7 @@ def load_desi_daily(night, exp_id, spec_number,
     # For now load daily cframes files
     # TODO: add support for loading arbitrary cframes.
     # TODO: Add support for loading by tile id + e rather than date + e
+    # TODO desispec.findfile instead.
     root = "/global/cfs/cdirs/desi/spectro/redux/daily/exposures"
     file_loc = Path(root, night, exp_id)
 

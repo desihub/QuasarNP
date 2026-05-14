@@ -6,17 +6,21 @@ import numpy as np
 
 import fitsio
 
-from quasarnp.utils import regrid, process_preds, rebin, wave, linear_wave
+from quasarnp.utils import regrid, process_preds, rebin, WaveGrid
 
 file_loc = pathlib.Path(__file__).parent.resolve() / "test_files"
 
 
 class TestUtilities(unittest.TestCase):
+    def setUp(self):
+        self.log_wave = WaveGrid(linear=False)
+        self.linear_wave = WaveGrid(linear=True)
+
     # Test taking the old grid and generating which bins on the new grid
     # the grid goes into.
     def test_regrid_log(self):
         # This is the regrids the grid to itself so shouldn't do anything
-        ob_bins, ob_keep = regrid(wave, wave)
+        ob_bins, ob_keep = regrid(self.log_wave, self.log_wave)
         expected_bins = np.arange(443)
 
         self.assertTrue(np.allclose(ob_bins, expected_bins))
@@ -25,7 +29,7 @@ class TestUtilities(unittest.TestCase):
         # Testing regridding the DESI grid into the SDSS/QuasarNet grid.
         wmin, wmax, wdelta = 3600, 9824, 0.8
         old_grid = np.round(np.arange(wmin, wmax + wdelta, wdelta), 1)
-        ob_bins, ob_keep = regrid(old_grid, wave)
+        ob_bins, ob_keep = regrid(WaveGrid(grid=old_grid), self.log_wave)
 
         # In order to not have to overload this file with nuisance, I have moved
         # the actual answer here to regrid.txt. It's quite long, so only
@@ -43,14 +47,14 @@ class TestUtilities(unittest.TestCase):
         wdelta_qnet = wdelta * 17
         new_grid = np.round(np.arange(wmin, wmax + wdelta, wdelta_qnet), 1)
 
-        ob_bins, ob_keep = regrid(new_grid, linear_wave)
+        ob_bins, ob_keep = regrid(WaveGrid(grid=new_grid), self.linear_wave)
         expected_bins = np.arange(458)
         self.assertTrue(np.allclose(ob_bins, expected_bins))
         self.assertTrue(np.allclose(ob_keep, np.ones_like(ob_keep, dtype=bool)))
 
         # Testing regridding the DESI grid into the linear QuasarNet grid.
         old_grid = np.round(np.arange(wmin, wmax + wdelta, wdelta), 1)
-        ob_bins, ob_keep = regrid(old_grid, linear_wave)
+        ob_bins, ob_keep = regrid(WaveGrid(grid=old_grid), self.linear_wave)
 
         # 17 DESI bins per linear QuasarNET bin, but 17 * 458 is slightly
         # longer than the true DESI grid, so the last bin only
@@ -62,7 +66,7 @@ class TestUtilities(unittest.TestCase):
     def test_regrid_arbitrary(self):
         # Stephen Bailey's arbitrary grid
         old_grid = np.arange(3600, 9800, 10)
-        ob_bins, ob_keep = regrid(old_grid, wave)
+        ob_bins, ob_keep = regrid(WaveGrid(grid=old_grid), self.log_wave)
 
         # In order to not have to overload this file with nuisance, I have moved
         # the actual answer here to regrid_arbitrary.txt. It's quite long, so only
@@ -74,11 +78,11 @@ class TestUtilities(unittest.TestCase):
 
     def test_regrid_failure(self):
         # Non constant binning should fail and raise a value error.
-        new_grid = np.concatenate([np.arange(3600, 4000, 10), np.arange(4000, 9800, 40)])
+        new_grid = WaveGrid(grid=np.concatenate([np.arange(3600, 4000, 10), np.arange(4000, 9800, 40)]))
 
         # Testing regridding the DESI grid onto this broken grid
         wmin, wmax, wdelta = 3600, 9824, 0.8
-        old_grid = np.round(np.arange(wmin, wmax + wdelta, wdelta), 1)
+        old_grid = WaveGrid(grid=np.round(np.arange(wmin, wmax + wdelta, wdelta), 1))
 
         with self.assertRaises(ValueError):
             _ = regrid(old_grid, new_grid)
@@ -103,10 +107,10 @@ class TestUtilities(unittest.TestCase):
                     # Load the flux and ivar
                     flux = h[fluxname].read()[:]
                     ivar = h[ivarname].read()[:]
-                    w_grid = h[wname].read()
+                    w_grid = WaveGrid(grid=h[wname].read())
 
                     # Rebin the flux and ivar
-                    n_flux, n_ivar = rebin(flux, ivar, w_grid, out_grid=wave)
+                    n_flux, n_ivar = rebin(flux, ivar, w_grid, out_grid=self.log_wave)
 
                     # Just checks that the rebinned is equal to the known
                     # "correct" rebinning
@@ -133,10 +137,10 @@ class TestUtilities(unittest.TestCase):
                     # Load the flux and ivar
                     flux = h[fluxname].read()[:]
                     ivar = h[ivarname].read()[:]
-                    w_grid = h[wname].read()
+                    w_grid = WaveGrid(grid=h[wname].read())
 
                     # Rebin the flux and ivar
-                    n_flux, n_ivar = rebin(flux, ivar, w_grid, out_grid=linear_wave)
+                    n_flux, n_ivar = rebin(flux, ivar, w_grid, out_grid=self.linear_wave)
 
                     # Just checks that the rebinned is equal to the known
                     # "correct" rebinning
