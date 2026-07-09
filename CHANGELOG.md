@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.2] - Unreleased
 - [#e42a4a73] QuasarNP internally now uses a WaveGrid object rather than numpy arrays
-for wavelength grids. All code is backwards compatible.
+for wavelength grids. No algorithmic change.
 
 ## [0.2.1] - 2025-12-18
 ### Changed
