@@ -37,8 +37,8 @@ class TestModels(unittest.TestCase):
         # the same.
         self.assertTrue(np.allclose(qnp_predict, qnet_predict, atol=0.1))
 
-        qnp_process = process_preds(qnp_predict, lines, lines_bal, qnet_grid)
-        qnet_process = process_preds(qnet_predict, lines, lines_bal, qnet_grid)
+        qnp_process = process_preds(qnp_predict, lines, lines_bal, wave=qnet_grid)
+        qnet_process = process_preds(qnet_predict, lines, lines_bal, wave=qnet_grid)
 
         # Zeroth index is the confidences, 3rd index is the BAL confidences
         self.assertTrue(np.allclose(qnp_process[0], qnet_process[0]))
