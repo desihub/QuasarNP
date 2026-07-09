@@ -30,7 +30,7 @@ def load_file(filename):
         Dictionary that maps layer names to layer weights.
     config_dict : dict
         Dictionary of model configuration options including padding mode.
-    w_grid : numpy.ndarray
+    w_grid : WaveGrid
         Wavelength grid used to train this network.
     """
     result = {}
@@ -112,7 +112,7 @@ def load_model(filename):
     -------
     QuasarNP
         Callable QuasarNP model with the weights provided by `filename`.
-    w_grid : numpy.ndarray
+    w_grid : WaveGrid
         Wavelength grid used to train this network.
     """
     db, config, w_grid = load_file(filename)
@@ -126,7 +126,7 @@ def load_model(filename):
 
 
 def read_truth(fi):
-    """ Read a list of truth files and return a dictionary of truth values.
+    """Read a list of truth files and return a dictionary of truth values.
 
     This is a legacy function ported from QuasarNet, and is designed to load
     SDSS data files to generate a truth table.
@@ -460,7 +460,7 @@ def load_desi_coadd(filename, rows=None, out_grid=WaveGrid(linear=False)):
         Boolean array indicating whether each row should be loaded. True
         if the row should be loaded, False otherwise. Defaults to None, which
         loads all rows.
-    out_grid : numpy.ndarray, optional
+    out_grid : WaveGrid, optional
         The wavelength grid to rebin the loaded exposure to. Defaults to the
         logarithmic QuasarNET grid.
 
@@ -546,7 +546,7 @@ def load_desi_daily(night, exp_id, spec_number,
         Array of length 500 indicating whether each fiber should be loaded.
         True if the fiber should be loaded, False otherwise.
         Defaults to True for all 500 fibers.
-    w_grid : numpy.ndarray, optional
+    w_grid : WaveGrid, optional
         The wavelength grid to rebin the loaded exposure to. Defaults to the
         logarithmic QuasarNET grid.
 
