@@ -131,8 +131,11 @@ class WaveGrid():
     def __len__(self):
         return len(self.wave)
 
+    def __getitem__(self, key):
+        return self.wave[key]
 
-def process_preds(preds, lines, lines_bal, verbose=True, wavegrid=WaveGrid(linear=False)):
+
+def process_preds(preds, lines, lines_bal, verbose=True, wave=WaveGrid(linear=False)):
     """Convert network output to line confidence and redshift predictions.
 
     Parameters
@@ -183,8 +186,8 @@ def process_preds(preds, lines, lines_bal, verbose=True, wavegrid=WaveGrid(linea
     # Doing non BAL lines first
     c_line = np.zeros((nlines, nspec))
     z_line = np.zeros_like(c_line) # This ensures they're always the same shape.
-    nbins = len(wavegrid)
-    i_to_wave = lambda x: np.interp(x, np.arange(nbins), wavegrid.wave)
+    nbins = len(wave)
+    i_to_wave = lambda x: np.interp(x, np.arange(nbins), wave.wave)
 
     for il, line in enumerate(lines):
         l = absorber_IGM[line]
