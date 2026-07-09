@@ -76,7 +76,8 @@ class WaveGrid():
                 If linear, this spacing is the spacing in linear wavelength.
                 If not linear, then this spacing must be in logarithmic wavelength.
                 Defaults to None, which uses 1e-3 for the default logarithmic
-                wavelength grid, and 0.8 for the default linear wavelength grid.
+                wavelength grid, and 0.8 * 17 (13.6) for the default linear
+                QuasarNET wavelength grid.
 
             grid : numpy.ndarray, optional
                 Override all other parameters, and use this wavelength grid
