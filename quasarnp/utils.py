@@ -99,7 +99,6 @@ class WaveGrid():
                 # the same number of linear bins as in the logarithmic case
                 # (458 vs 443)
                 wdelta = 0.8 * 17
-
         else:
             if wmax is None:
                 wmax = 10000
@@ -113,9 +112,7 @@ class WaveGrid():
         if wmax < wmin:
             raise ValueError(f"wmin ({wmin}) must be less than wmax ({wmax})!")
 
-        if self.is_linear:
-            self.wave = np.round(np.arange(wmin, wmax + 1e-3, wdelta), 1)
-        elif grid is not None:
+        if grid is not None:
             self.wave = grid
             self.wmin = grid[0]
             self.wmax = grid[-1]
@@ -125,9 +122,11 @@ class WaveGrid():
             else:
                 self.wdelta = np.log10(grid[1]) - np.log10(grid[0])
         else:
-            self.wave = 10**(wmin + np.arange(nbins) * wdelta)
-
-        self.wmin, self.wmax, self.wdelta = wmin, wmax, wdelta
+            if self.is_linear:
+                self.wave = np.round(np.arange(wmin, wmax + 1e-3, wdelta), 1)
+            else:
+                self.wave = 10**(wmin + np.arange(nbins) * wdelta)
+            self.wmin, self.wmax, self.wdelta = wmin, wmax, wdelta
 
     def __len__(self):
         return len(self.wave)
