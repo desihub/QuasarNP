@@ -42,8 +42,6 @@ def load_file(filename):
         try:
             w_grid = f["model_grid"][:]
 
-            print(f"{w_grid=}")
-
             log_grid =  WaveGrid(linear=False)
             linear_grid = WaveGrid(linear=True)
             # Checking some defaults to correctly initialize the default grids.
