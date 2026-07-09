@@ -26,7 +26,7 @@ class TestModels(unittest.TestCase):
 
         X, w = load_desi_coadd(data_loc)
 
-        qnp_model, _ = load_model(weights_loc)
+        qnp_model, qnet_grid = load_model(weights_loc)
         qnp_predict = qnp_model.predict(X[:, :, None])
 
         qnet_predict = np.load(file_loc / "qnet_output_6_layer.npy")
@@ -37,8 +37,8 @@ class TestModels(unittest.TestCase):
         # the same.
         self.assertTrue(np.allclose(qnp_predict, qnet_predict, atol=0.1))
 
-        qnp_process = process_preds(qnp_predict, lines, lines_bal)
-        qnet_process = process_preds(qnet_predict, lines, lines_bal)
+        qnp_process = process_preds(qnp_predict, lines, lines_bal, qnet_grid)
+        qnet_process = process_preds(qnet_predict, lines, lines_bal, qnet_grid)
 
         # Zeroth index is the confidences, 3rd index is the BAL confidences
         self.assertTrue(np.allclose(qnp_process[0], qnet_process[0]))
