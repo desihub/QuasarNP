@@ -51,29 +51,91 @@ absorber_IGM = {
     'LYB'         : 1025.72,
 }
 
+class WaveGrid():
+    def __init__(self, linear=False, wmin=None, wmax=None, wdelta=None, grid=None):
+        """
+            Initialize a WaveGrid object, used for defining spectra wavelength grids.
 
-# Log SDSS grid information
-# TODO: Make these editable and expose them publicly.
-# Perhaps in the same way Farr did?
-l_min = np.log10(3600.)
-l_max = np.log10(10000.)
-dl = 1e-3 #* 2
-nbins = int((l_max - l_min) / dl)
-wave = 10**(l_min + np.arange(nbins) * dl)
+            Parameters
+            ----------
+            linear : bool, optional
+                Whether this wavelength grid is equally spaced in linear wavelength
+                or equally spaced in logarithmic wavelength.
 
-# Linear DESI grid information
-wmin, wmax, wdelta = 3600, 9824, 0.8
-desi_wave = np.round(np.arange(wmin, wmax + wdelta, wdelta), 1)
+            wmin : float, optional
+                The lower bound of the wavelength grid. Defaults to None, which uses
+                3600 for both the default linear and logarithmic wavelength grids.
 
-# 17 seems arbitrary but its the constant needed to get approximately
-# the same number of linear bins as in the logarithmic case
-# (458 vs 443)
-wdelta_qnet = wdelta * 17
-linear_wave = np.round(np.arange(wmin, wmax + wdelta, wdelta_qnet), 1)
-nbins_linear = len(linear_wave)
+            wmax : float, optional
+                The upper bound of the wavelength grid. Defaults to None, which uses
+                10000 for the default logarithmic grid and 9824 for the default
+                linear grid.
+
+            wdelta : float, optional
+                The spacing between wavelength bins in the wavelength grid.
+                If linear, this spacing is the spacing in linear wavelength.
+                If not linear, then this spacing must be in logarithmic wavelength.
+                Defaults to None, which uses 1e-3 for the default logarithmic
+                wavelength grid, and 0.8 * 17 (13.6) for the default linear
+                QuasarNET wavelength grid.
+
+            grid : numpy.ndarray, optional
+                Override all other parameters, and use this wavelength grid
+                as the wavelength grid. Allows for unusual or inconsistent spacing
+                grids, but may break some other functionality. Defaults to None.
+
+        """
+        self.is_linear = linear
+
+        # Both grids have the same lower bound.
+        if wmin is None:
+            wmin = 3600
+
+        if self.is_linear:
+            if wmax is None:
+                wmax = 9824
+            if wdelta is None:
+                # 17 seems arbitrary but its the constant needed to get approximately
+                # the same number of linear bins as in the logarithmic case
+                # (458 vs 443)
+                wdelta = 0.8 * 17
+        else:
+            if wmax is None:
+                wmax = 10000
+            if wdelta is None:
+                wdelta = 1e-3
+            wmin = np.log10(wmin)
+            wmax = np.log10(wmax)
+            nbins = int((wmax - wmin) / wdelta)
+
+        # Sanity checking.
+        if wmax < wmin:
+            raise ValueError(f"wmin ({wmin}) must be less than wmax ({wmax})!")
+
+        if grid is not None:
+            self.wave = grid
+            self.wmin = grid[0]
+            self.wmax = grid[-1]
+            # Assume uniform, but even if not the first grid spacing is a reasonable choice.
+            if self.is_linear:
+                self.wdelta = grid[1] - grid[0]
+            else:
+                self.wdelta = np.log10(grid[1]) - np.log10(grid[0])
+        else:
+            if self.is_linear:
+                self.wave = np.round(np.arange(wmin, wmax + 1e-3, wdelta), 1)
+            else:
+                self.wave = 10**(wmin + np.arange(nbins) * wdelta)
+            self.wmin, self.wmax, self.wdelta = wmin, wmax, wdelta
+
+    def __len__(self):
+        return len(self.wave)
+
+    def __getitem__(self, key):
+        return self.wave[key]
 
 
-def process_preds(preds, lines, lines_bal, verbose=True, wave=wave):
+def process_preds(preds, lines, lines_bal, verbose=True, wave=WaveGrid(linear=False)):
     """Convert network output to line confidence and redshift predictions.
 
     Parameters
@@ -86,6 +148,9 @@ def process_preds(preds, lines, lines_bal, verbose=True, wave=wave):
             List of BAL line names.
         verbose : bool, optional
             Whether or not to print verbose debug output. Defaults to True.
+        wavegrid : WaveGrid, optional
+            The wavelength grid used to generate these predictions. Used to
+            determine redshift. Defaults to the default logarithmic QuasarNET grid.
 
     Returns
     -------
@@ -121,7 +186,8 @@ def process_preds(preds, lines, lines_bal, verbose=True, wave=wave):
     # Doing non BAL lines first
     c_line = np.zeros((nlines, nspec))
     z_line = np.zeros_like(c_line) # This ensures they're always the same shape.
-    i_to_wave = lambda x: np.interp(x, np.arange(len(wave)), wave)
+    nbins = len(wave)
+    i_to_wave = lambda x: np.interp(x, np.arange(nbins), wave.wave)
 
     for il, line in enumerate(lines):
         l = absorber_IGM[line]
@@ -137,7 +203,7 @@ def process_preds(preds, lines, lines_bal, verbose=True, wave=wave):
         # a box and how far into that box the line is, convert that
         # box distance to a wavelength. Convert the wavelength to a
         # redshift.
-        z_line[il] = (i_to_wave((j + offset) * len(wave) / nboxes) / l) - 1
+        z_line[il] = (i_to_wave((j + offset) * nbins / nboxes) / l) - 1
 
     # Not "best redshift", rather "redshift of most confident line"
     zbest = z_line[c_line.argmax(axis=0), np.arange(nspec)]
@@ -155,18 +221,18 @@ def process_preds(preds, lines, lines_bal, verbose=True, wave=wave):
         offset  = preds[il+nlines][np.arange(nspec, dtype=int), nboxes + j]
 
         c_line_bal[il] = preds[il + nlines][:, :13].max(axis=1)
-        z_line_bal[il] = (i_to_wave((j + offset) * len(wave) / nboxes) / l) - 1
+        z_line_bal[il] = (i_to_wave((j + offset) * nbins / nboxes) / l) - 1
 
     return c_line, z_line, zbest, c_line_bal, z_line_bal
 
-def regrid(old_grid, new_grid=wave):
+def regrid(old_grid, new_grid=WaveGrid(linear=False)):
     """Generate the mapping from the old wavelength grid to the QuasarNet grid.
 
     Parameters
     ----------
-    old_grid : numpy.ndarray
+    old_grid : WaveGrid
         The old wavelength grid.
-    new_grid : numpy.ndarray, optional
+    new_grid : WaveGrid, optional
         The wavelength grid to rebin the loaded exposure to. Defaults to the
         logarithmic QuasarNET grid.
 
@@ -180,22 +246,21 @@ def regrid(old_grid, new_grid=wave):
         wavelength bin is contained within the new grid boundaries and False if
         it is not.
     """
-    linear_spacing = np.allclose(np.diff(new_grid)[0], np.diff(new_grid))
-    log_spacing = np.allclose(np.diff(np.log10(new_grid))[0], np.diff(np.log10(new_grid)))
+    linear_spacing = np.allclose(np.diff(new_grid.wave)[0], np.diff(new_grid.wave))
+    log_spacing = np.allclose(np.diff(np.log10(new_grid.wave))[0], np.diff(np.log10(new_grid.wave)))
 
     if linear_spacing:
         # Rounding off at the 10th decimal place helps avoid float rounding errors when
         # rebinning the desi grid to qnet grids since the latter should be an integer
         # number of the former bins.
-        wdelta = np.diff(new_grid)[0]
-        wmin = new_grid[0]
-        bins = np.floor(np.round(((old_grid - wmin) / (wdelta)), decimals=10)).astype(int)
+        wdelta = np.diff(new_grid.wave)[0]
+        wmin = new_grid.wave[0]
+        bins = np.floor(np.round(((old_grid.wave - wmin) / (wdelta)), decimals=10)).astype(int)
 
     elif log_spacing:
-        l_min = np.log10(new_grid)[0]
-        dl = np.diff(np.log10(new_grid))[0]
-
-        bins = np.floor((np.log10(old_grid) - l_min) / dl).astype(int)
+        l_min = np.log10(new_grid.wave)[0]
+        dl = np.diff(np.log10(new_grid.wave))[0]
+        bins = np.floor((np.log10(old_grid.wave) - l_min) / dl).astype(int)
 
     else:
         raise ValueError("New grid spacing must be constant in either logarithmic or linear wavelength.")
@@ -204,7 +269,7 @@ def regrid(old_grid, new_grid=wave):
     return bins, w
 
 
-def rebin(flux, ivar, w_grid, out_grid=wave):
+def rebin(flux, ivar, w_grid, out_grid=WaveGrid(linear=False)):
     """Rebin flux to the QuasarNet wavelength grid.
 
     The process for rebinning flux is as follows. First, the flux is multiplied
@@ -219,9 +284,9 @@ def rebin(flux, ivar, w_grid, out_grid=wave):
         Input flux array of shape `(nspec, len(w_grid))`.
     ivar : numpy.ndarray
         Input ivar array of shape `(nspec, len(w_grid))`.
-    w_grid: numpy.ndarray
+    w_grid: WaveGrid
         Input wavelength grid.
-    out_grid : numpy.ndarray, optional
+    out_grid : WaveGrid, optional
         The wavelength grid to rebin the loaded exposure to. Defaults to the
         logarithmic QuasarNET grid.
 
@@ -237,7 +302,7 @@ def rebin(flux, ivar, w_grid, out_grid=wave):
     regrid : Function that converts the old wavelength grid to the new grid.
     """
 
-    new_grid, w = regrid(w_grid, out_grid)
+    bins, w = regrid(w_grid, out_grid)
 
     fl_iv = flux * ivar
 
@@ -252,13 +317,13 @@ def rebin(flux, ivar, w_grid, out_grid=wave):
     # past the QuasarNET grid and give negative bin values. I have tests that
     # confirm this still works on DESI data, don't worry.
     fl_iv = fl_iv[:, w]
-    new_grid = new_grid[w]
+    bins = bins[w]
     ivar_temp = ivar[:, w]
 
     for i in range(len(flux)):
-        c = np.bincount(new_grid, weights=fl_iv[i, :])
+        c = np.bincount(bins, weights=fl_iv[i, :])
         flux_out[i, :len(c)] += c
-        c = np.bincount(new_grid, weights=ivar_temp[i, :])
+        c = np.bincount(bins, weights=ivar_temp[i, :])
         ivar_out[i, :len(c)] += c
 
     return flux_out, ivar_out
