@@ -15,3 +15,6 @@ readme = "README.md"
 
 [tool.coverage.report]
 omit = ["quasarnp/tests/*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "quasarnp.__version__"}
